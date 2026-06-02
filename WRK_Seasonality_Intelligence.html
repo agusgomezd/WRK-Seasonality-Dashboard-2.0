@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WRK Marketing &mdash; Seasonality Intelligence</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0908'/><path d='M4 24 Q 9 22 12 17 T 20 9' stroke='%23c9a96e' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/><circle cx='20' cy='9' r='2.8' fill='%23c9a96e'/><circle cx='20' cy='9' r='5' fill='none' stroke='%23c9a96e' stroke-width='1' opacity='.4'/></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0908'/><path d='M4 24 Q 9 22 12 17 T 20 9' stroke='%23c9a96e' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/><circle cx='20' cy='9' r='2.8' fill='%23c9a96e'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0a0908;--bg2:#13110f;--card:#1a1816;--card2:#22201d;
+  --border:rgba(201,169,110,.10);--border2:rgba(201,169,110,.22);
+  --text:#f5efe6;--text2:#a8a094;--text3:#6b6358;
+  --accent:#c9a96e;--accent2:#e0c089;--accent3:#8b7548;
+  --peak:#059669;--strong:#10b981;--above:#22c55e;--avg:#6366f1;
+  --slight:#eab308;--below:#f97316;--trough:#dc2626;
+  --blue:#3b82f6;--violet:#8b5cf6;--amber:#f59e0b;
+  --font:'Inter',-apple-system,sans-serif
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);font-family:var(--font);color:var(--text);line-height:1.5;background-image:radial-gradient(ellipse at top,rgba(201,169,110,.04) 0%,transparent 55%);transition:background-image .4s ease}
+.wrap{max-width:1440px;margin:0 auto;padding:24px 32px 80px}
+.section{margin-bottom:56px}
+.section-title{font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);margin-bottom:24px;display:flex;align-items:center;gap:10px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px}
+.card:hover{border-color:var(--border2)}
+
+/* === BRAND SWITCHER (sticky top bar) === */
+.brand-switcher{position:sticky;top:0;z-index:100;background:rgba(10,9,8,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);margin:0 -32px 24px;padding:14px 32px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.bs-left{display:flex;align-items:center;gap:14px}
+.bs-logo{font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--accent2);display:flex;align-items:center;gap:8px}
+.bs-logo::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.bs-sep{width:1px;height:18px;background:var(--border)}
+.bs-title{font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.3px}
+.bs-dropdown{position:relative;min-width:240px}
+.bs-dd-btn{font-family:var(--font);font-size:13px;font-weight:700;letter-spacing:.3px;color:#0a0908;background:linear-gradient(135deg,var(--accent3),var(--accent));border:1px solid var(--accent2);border-radius:10px;padding:10px 38px 10px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:10px;width:100%;text-align:left;position:relative}
+.bs-dd-btn::after{content:'';position:absolute;right:14px;top:50%;width:8px;height:8px;border-right:2px solid #0a0908;border-bottom:2px solid #0a0908;transform:translateY(-70%) rotate(45deg);transition:transform .15s}
+.bs-dd-btn.open::after{transform:translateY(-30%) rotate(-135deg)}
+.bs-dd-btn .dot{width:7px;height:7px;border-radius:50%;background:#0a0908;opacity:.7;flex-shrink:0}
+.bs-dd-btn:hover{filter:brightness(1.05)}
+.bs-dd-menu{position:absolute;top:calc(100% + 6px);right:0;left:0;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:6px;box-shadow:0 12px 40px rgba(0,0,0,.5);max-height:0;overflow:hidden;opacity:0;transition:max-height .2s,opacity .15s,padding .2s;pointer-events:none}
+.bs-dd-menu.open{max-height:520px;opacity:1;padding:6px;pointer-events:auto}
+.bs-dd-item{font-family:var(--font);font-size:12px;font-weight:600;letter-spacing:.3px;color:var(--text2);background:transparent;border:0;border-radius:7px;padding:9px 12px;cursor:pointer;transition:all .12s;display:flex;align-items:center;gap:9px;width:100%;text-align:left}
+.bs-dd-item:hover{background:var(--bg);color:var(--text)}
+.bs-dd-item.active{background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(99,102,241,.04));color:var(--text)}
+.bs-dd-item.pending{opacity:.5}
+.bs-dd-item .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.bs-tab.pending::after{content:'PENDING';font-size:8.5px;background:rgba(245,158,11,.18);color:#f59e0b;padding:2px 6px;border-radius:6px;margin-left:4px;font-weight:700;letter-spacing:.5px}
+
+/* Header */
+.header{margin-bottom:48px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:24px}
+.brand-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(201,169,110,.08);border:1px solid rgba(201,169,110,.24);border-radius:100px;padding:5px 14px 5px 10px;margin-bottom:14px}
+.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(201,169,110,.5)}
+.brand-badge span{font-size:11px;font-weight:600;color:var(--accent2);letter-spacing:.6px}
+h1{font-size:44px;font-weight:900;line-height:1.05;letter-spacing:-1.5px}
+h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.header-sub{color:var(--text2);font-size:14px;margin-top:10px;max-width:680px}
+.header-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.meta-pill{font-size:10.5px;font-weight:600;color:var(--text3);background:var(--bg2);border:1px solid var(--border);border-radius:100px;padding:5px 12px;letter-spacing:.3px}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,150px);gap:12px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 16px;text-align:center;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.5}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.kpi-val{font-size:24px;font-weight:900;line-height:1.05}
+.kpi-sub{font-size:10.5px;color:var(--text3);margin-top:5px}
+
+/* Heatmap */
+.heatmap{display:grid;grid-template-columns:repeat(12,1fr);gap:8px;margin-bottom:32px}
+.hm-cell{border-radius:12px;padding:16px 8px 14px;text-align:center;border:1px solid rgba(255,255,255,.06);transition:transform .15s,box-shadow .15s;position:relative}
+.hm-cell:hover{transform:translateY(-3px);box-shadow:0 12px 36px rgba(0,0,0,.4)}
+.hm-month{font-size:12px;font-weight:700;letter-spacing:.5px;margin-bottom:10px}
+.hm-coeff{font-size:22px;font-weight:900;line-height:1}
+.hm-label{font-size:9px;font-weight:700;margin-top:6px;opacity:.85;letter-spacing:.5px;text-transform:uppercase}
+.hm-bar{height:3px;border-radius:2px;margin-top:10px;background:rgba(255,255,255,.12)}
+.hm-fill{height:100%;border-radius:2px;background:rgba(255,255,255,.7)}
+.star{position:absolute;top:6px;right:7px;font-size:11px}
+.c-peak{background:linear-gradient(135deg,#052e16,#064e3b);color:#6ee7b7}
+.c-strong{background:linear-gradient(135deg,#14532d,#166534);color:#86efac}
+.c-above{background:linear-gradient(135deg,#1a3a1a,#1e4620);color:#bbf7d0}
+.c-avg{background:linear-gradient(135deg,#1e1b4b,#312e81);color:#c4b5fd}
+.c-slight{background:linear-gradient(135deg,#422006,#451a03);color:#fde68a}
+.c-below{background:linear-gradient(135deg,#431407,#7c2d12);color:#fca5a5}
+.c-trough{background:linear-gradient(135deg,#7f1d1d,#991b1b);color:#fecaca}
+
+/* Table */
+.coeff-table{width:100%;border-collapse:collapse}
+.coeff-table th{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);padding:0 12px 14px;text-align:left;border-bottom:1px solid var(--border)}
+.coeff-table td{padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+.coeff-table tr:last-child td{border-bottom:none}
+.coeff-table tr:hover td{background:rgba(201,169,110,.025)}
+.td-month{font-weight:700;font-size:13px;display:flex;align-items:center;gap:10px}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.td-coeff{font-size:18px;font-weight:900;font-variant-numeric:tabular-nums}
+.bar-wrap{width:110px;height:5px;background:rgba(255,255,255,.07);border-radius:3px}
+.bar-inner{height:100%;border-radius:3px}
+.badge{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.5px;padding:3px 9px;border-radius:100px;text-transform:uppercase;white-space:nowrap}
+.bp{background:rgba(5,150,105,.15);color:#10b981;border:1px solid rgba(16,185,129,.25)}
+.bs{background:rgba(16,185,129,.15);color:#22c55e;border:1px solid rgba(34,197,94,.25)}
+.ba{background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(74,222,128,.2)}
+.bv{background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.25)}
+.bb{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
+.bw{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
+.bt{background:rgba(220,38,38,.2);color:#fca5a5;border:1px solid rgba(220,38,38,.3)}
+
+/* Charts */
+.chart-wrap{position:relative;height:260px}
+.chart-wrap-tall{position:relative;height:310px}
+.chart-label{font-size:15px;font-weight:700;margin-bottom:4px}
+.chart-desc{font-size:11.5px;color:var(--text3);margin-bottom:18px;line-height:1.5}
+
+/* Month cards */
+.month-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.month-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s,transform .15s}
+.month-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.mc-header{padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.mc-name{font-size:16px;font-weight:800}
+.mc-coeff{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:100px}
+.mc-body{padding:14px 16px}
+.mc-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.mc-key{font-size:11px;color:var(--text3);font-weight:500}
+.mc-val{font-size:12px;font-weight:700}
+.mc-div{height:1px;background:var(--border);margin:10px 0}
+.mc-note{font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:8px}
+.mc-action{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:6px 10px;border-radius:8px;text-align:center;margin-top:10px}
+.asc{background:rgba(16,185,129,.12);color:#10b981}
+.aho{background:rgba(99,102,241,.12);color:#818cf8}
+.are{background:rgba(245,158,11,.12);color:#f59e0b}
+.apr{background:rgba(239,68,68,.12);color:#ef4444}
+.mc-conf{font-size:10px;color:var(--text3);text-align:right;margin-top:6px}
+
+/* Findings */
+.finding-box{background:var(--bg2);border-radius:12px;padding:18px 20px;border-left:3px solid;margin-bottom:12px}
+.fg{border-color:#10b981}
+.fa{border-color:#f59e0b}
+.fr{border-color:#ef4444}
+.fv{border-color:var(--accent)}
+.finding-title{font-size:12px;font-weight:700;margin-bottom:5px}
+.finding-text{font-size:12px;color:var(--text2);line-height:1.6}
+.finding-text strong{color:var(--text);font-weight:700}
+
+/* Insights */
+.insight-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+.insight-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px}
+.insight-icon{font-size:24px;margin-bottom:12px}
+.insight-title{font-size:14px;font-weight:800;margin-bottom:16px}
+.insight-item{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;font-size:12.5px;color:var(--text2);line-height:1.5}
+.insight-num{font-size:11px;font-weight:800;color:var(--text);background:var(--bg2);border:1px solid var(--border);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.insight-item strong{color:var(--text);font-weight:700}
+.anno{display:flex;align-items:flex-start;gap:10px;background:rgba(201,169,110,.05);border:1px solid rgba(201,169,110,.16);border-radius:10px;padding:14px 18px;font-size:12.5px;color:var(--text2);margin-bottom:20px;line-height:1.6}
+.anno strong{color:var(--text);font-weight:700}
+
+/* Day-of-week mini chart */
+.dow-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.dow-cell{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center}
+.dow-day{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px}
+.dow-rev{font-size:18px;font-weight:900;margin-top:6px}
+.dow-roas{font-size:11px;font-weight:600;margin-top:3px}
+
+/* Empty state for brands without data */
+.empty-state{background:var(--card);border:1px dashed var(--border2);border-radius:20px;padding:80px 40px;text-align:center;margin-top:40px}
+.empty-icon{font-size:48px;margin-bottom:16px;opacity:.5}
+.empty-title{font-size:24px;font-weight:800;margin-bottom:12px}
+.empty-text{font-size:14px;color:var(--text2);max-width:560px;margin:0 auto 24px;line-height:1.6}
+.empty-checklist{display:inline-flex;flex-direction:column;gap:10px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 28px;text-align:left;margin:8px auto}
+.ec-item{font-size:12.5px;color:var(--text2);display:flex;gap:10px;align-items:center}
+.ec-item .ec-status{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(245,158,11,.18);color:#f59e0b;letter-spacing:.5px}
+.ec-item.done .ec-status{background:rgba(16,185,129,.18);color:#10b981}
+
+.footer{text-align:center;padding-top:48px;border-top:1px solid var(--border);color:var(--text3);font-size:12px;line-height:1.8}
+.footer strong{color:var(--text2)}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.heatmap{grid-template-columns:repeat(6,1fr)}.month-grid{grid-template-columns:repeat(2,1fr)}.grid2,.grid3,.grid4,.insight-grid,.dow-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- BRAND SWITCHER -->
+<div class="brand-switcher">
+  <div class="bs-left">
+    <div class="bs-logo">WRK Marketing</div>
+    <div class="bs-sep"></div>
+    <div class="bs-title">Seasonality Intelligence</div>
+  </div>
+  <div class="bs-dropdown" id="brandDropdown">
+    <button class="bs-dd-btn" id="brandDdBtn" type="button"><span class="dot"></span><span id="brandDdLabel">Select Brand</span></button>
+    <div class="bs-dd-menu" id="brandDdMenu"></div>
+  </div>
+</div>
+
+<div class="wrap" id="dashboardRoot"></div>
+
+<script>
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// =============================================================
+// BRANDS REGISTRY
+// =============================================================
+const BRANDS = {
+
+  // -------------------- HOUSE OF LEON --------------------
+  'house-of-leon': {
+    name: 'House of Leon',
+    em: 'Leon',
+    sub: 'Luxury Furniture &middot; v2 (scale-normalized) &middot; True Seasonality Decoupled From 4&times; Hypergrowth &middot; TW + Google Ads + Trends',
+    badge: 'WRK MARKETING &middot; SEASONALITY INTELLIGENCE',
+    accent: '#c9a96e', accent2: '#e0c089', accent3: '#8b7548',
+    ready: true,
+    meta: ['v2 scale-normalized','2024 + 2025 baselines','Account 4&times; growth handled','36 months TW history','863 days Google Ads','5 years Google Trends'],
+    kpis: [
+      {label:'True Peak', val:'November', color:'#10b981', sub:'1.99 coef &middot; 2&times; annual avg'},
+      {label:'True Trough', val:'January', color:'#ef4444', sub:'0.53 coef &middot; April 0.64'},
+      {label:'Best Efficiency', val:'August', color:'var(--accent)', sub:'10.32&times; ROAS in 2025'},
+      {label:'Best Margin Month', val:'May', color:'#f59e0b', sub:'45.8% net margin'},
+    ],
+    data: {
+      // v2 COEFFICIENTS: within-year normalized (2024 + 2025) — strips 4× hypergrowth distortion
+      // Old v1 confounded growth with seasonality (Apr 2026 $1.75M inflated April coef to 1.27)
+      COEFF:[0.528,0.847,0.664,0.638,1.152,0.834,0.910,1.112,1.077,1.038,1.989,1.211],
+      COEFF_V1_LEGACY:[0.835,1.156,1.123,1.269,1.317,0.661,0.698,0.862,0.848,0.835,1.509,0.886],
+      REV:[581202,803933,781109,882683,916132,460165,485791,599428,590155,580790,1050076,616559],
+      SPEND:[173151,170601,180484,179558,159412,109129,96135,83293,104605,129636,249460,118137],
+      ROAS:[3.37,4.93,3.98,4.46,5.61,4.92,6.83,8.41,6.66,5.18,4.87,4.88],
+      CH_ROAS:[4.32,4.89,4.63,5.38,5.57,3.81,5.67,5.17,4.35,5.08,5.51,4.62],
+      POAS:[1.79,3.02,2.34,2.68,3.58,2.43,3.43,4.32,3.62,2.56,2.56,2.70],
+      MARGIN:[23.6,41.0,32.1,35.9,45.8,29.4,33.4,38.4,38.9,30.8,33.7,29.8],
+      ORDERS:[299,348,354,351,330,199,201,256,244,271,500,271],
+      NEW_ORDERS:[207,242,249,231,242,138,139,182,167,191,395,186],
+      AOV:[1975,2486,2164,2476,2746,2177,2546,2283,2321,2076,2050,2280],
+      CVR:[0.12,0.18,0.21,0.19,0.23,0.12,0.14,0.19,0.34,0.27,0.33,0.20],
+      NCPA:[847,703,783,838,673,737,649,486,596,628,564,745],
+      NEW_IDX:[0.968,1.130,1.161,1.080,1.128,0.647,0.651,0.849,0.782,0.892,1.845,0.867],
+      GAP:[-22.0,0.8,-14.0,-17.1,0.7,29.1,20.5,62.7,53.1,2.0,-11.6,5.6],
+      REV_2024:[255134,413993,287057,281931,499753,324464,408633,475987,427359,415485,874809,589488],
+      REV_2025:[461006,727424,653382,615464,1130057,901289,862452,1104960,1146152,1096798,1926396,1046997],
+      REV_2026:[1027466,1270385,1402888,1750656,1118586,null,null,null,null,null,null,null],
+      ROAS_2024:[3.69,5.63,3.07,3.82,4.67,2.73,3.21,3.87,3.29,3.69,3.97,4.04],
+      ROAS_2025:[2.88,4.66,3.56,3.60,6.51,4.82,5.96,10.32,7.00,4.48,4.05,7.52],
+      ROAS_2026:[3.54,4.50,5.30,5.96,5.66,null,null,null,null,null,null,null],
+      GT_CAT_1:[23.4,23.2,24.7,32.2,23.7,20.9,22.3,22.4,21.3,20.6,24.8,22.2],
+      GT_CAT_2:[6.2,9.2,15.3,22.2,23.5,18.5,14.0,11.7,9.6,7.9,7.0,5.3],
+      GT_CAT_1_LABEL:'Coffee Table',
+      GT_CAT_2_LABEL:'Outdoor Furniture',
+      DOW:[
+        {d:'MON',rev:16185,roas:11.52},
+        {d:'TUE',rev:15508,roas:12.13},
+        {d:'WED',rev:13551,roas:10.23},
+        {d:'THU',rev:13994,roas:10.09},
+        {d:'FRI',rev:13459,roas:11.53},
+        {d:'SAT',rev:10421,roas:8.03},
+        {d:'SUN',rev:12322,roas:7.67},
+      ],
+      BUDGET_ACTIONS:['Reduce','Hold','Reduce','Reduce','Scale','Hold','Hold','Scale','Scale','Build for Q4','Max Scale','Scale'],
+      EXEC_SUMMARY:'<strong>v2 (scale-normalized):</strong> House of Leon is a <strong>classic Q4-peaked luxury furniture brand</strong>: Nov coef 1.99 (2&times; annual avg) and Dec 1.21 are the true peaks. <strong>Jan (0.53) and Apr (0.64) are the real troughs</strong>. Previous v1 analysis used simple monthly averages across 4&times; hypergrowth years (2024 $5M &rarr; 2025 $12M &rarr; 2026 partial $1M+/mo), confounding growth with seasonality. The "April spring spike" narrative was driven entirely by Apr 2026 hypergrowth ($1.75M Apr 2026 vs $282k Apr 2024), NOT real seasonality. Account has grown 4&times; in 24 months with healthy ROAS improvement (2024 avg 3.87&times; &rarr; 2025 avg 5.45&times;), but the underlying seasonal shape is a classic Q4-dominant luxury pattern. Aug remains the year\'s efficiency peak (10.32&times; ROAS in 2025) — Trends "coffee table" peaks support this.',
+      FINDINGS:[
+        {cls:'fr',title:'v1 Methodology Error: Confused Growth With Season',text:'<strong>Previous coefficients were wrong by 20-50% per month.</strong> Apr v1 = 1.27 (inflated by 2026 hypergrowth); v2 = 0.64 (true). Nov v1 = 1.51 (suppressed by Q4 2024/2025 not in 2026 yet); v2 = 1.99. Mar v1 = 1.12; v2 = 0.66. Any prior plan that scaled into spring or pulled back in Nov was operating on inverted signal.'},
+        {cls:'fg',title:'True Peak Is Nov (1.99 coef)',text:'<strong>Nov is 2&times; the annual average</strong> &mdash; the steepest peak in the portfolio. 2024 Nov: $875k. 2025 Nov: $1.93M. 2026 Nov projected: $3M+. Combine BF/CM concentration with luxury gift-buying intent and year-end home renovation budgets. Plan capacity & creative by August.'},
+        {cls:'fr',title:'January Is The Real Annual Trough',text:'<strong>Jan coef 0.53</strong> &mdash; 47% below annual average. Post-holiday returns + buyer remorse on luxury purchases + soft conversion intent. Worst POAS (1.79) and Net Margin (23.6%) of any month. <strong>Cut budget 30-40% vs baseline.</strong>'},
+        {cls:'fa',title:'April Is Actually A Trough (Not A Peak)',text:'v2 Apr coef = <strong>0.64</strong>. The "April spring spike" in v1 was entirely 2026 hypergrowth ($1.75M Apr 2026 vs $282k Apr 2024 vs $615k Apr 2025). Once normalized for scale, April is the second-weakest month. Same for March (0.66). <strong>Don\'t scale spring like v1 suggested.</strong>'},
+        {cls:'fg',title:'Aug Is The Year\'s Efficiency Sweet Spot',text:'<strong>2025 Aug ROAS: 10.32&times;</strong> (year high) on the LOWEST spend ($107k). Coef 1.11 (above-avg demand) + lowest competitive pressure. POAS 4.32 (3yr avg). Channel-reported ROAS 5.17&times; &mdash; Google undercounts by 63%. This holds across v1/v2; methodology fix doesn\'t change Aug.'},
+        {cls:'fv',title:'Account Growth: 4&times; In 24 Months, Healthy & Sustained',text:'Q1 2024: $956k &rarr; Q1 2025: $1.84M &rarr; Q1 2026: $3.7M. Every month grew 50&ndash;200% YoY. ROAS also improved 2024 (3.87 avg) &rarr; 2025 (5.45 avg). <strong>Growth is real, not noise</strong> &mdash; just don\'t mistake growth for seasonality (the v1 error).'},
+      ],
+      MONTH_META:[
+        {s:'&#10052;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.53 &mdash; annual trough.</strong> POAS 1.79, margin 23.6%. Post-holiday returns + low intent. <strong>Cut 30-40% vs baseline.</strong> Worst ROI window of the year.'},
+        {s:'&#127801;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.85.</strong> Mild slow. Margin 41% (good), AOV $2,486. Steady spend, don\'t over-scale despite Valentine\'s narrative.'},
+        {s:'&#127793;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.66 &mdash; spring slowdown.</strong> v1 incorrectly labeled "Hold". Real signal: demand is weak. Reduce spend modestly, save dry powder for May.'},
+        {s:'&#127800;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.64 (second-weakest month).</strong> v1 had this as "Scale" &mdash; that was wrong. April hypergrowth in 2026 fooled the math. Real April is a trough. Reduce 15-20%.'},
+        {s:'&#9728;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.15 &mdash; spring peak.</strong> Memorial Day + outdoor furniture window. 2025 May hit $1.13M at 6.51&times; ROAS. AOV $2,746 (year high). 45.8% margin. Scale moderately.'},
+        {s:'&#127956;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.83.</strong> v1 said "Reduce" but data shows June is moderate, not trough. ROAS 4.92&times;, margin 29%. Maintain spend, don\'t cut.'},
+        {s:'&#127754;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.91.</strong> Near-average demand. ROAS recovers to 6.83&times;. Channel undercounts by 21%. Maintain.'},
+        {s:'&#127807;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.11 + 2025 ROAS 10.32&times;.</strong> Best efficiency window. POAS 4.32, $487 NCPA (cheapest acquisition). Channel undercounts by 63%. Scale 50% above baseline.'},
+        {s:'&#127794;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.08.</strong> Strong above-average. ROAS 6.66&times;, conv rate 0.34% (year high). Solid scale window pre-Q4.'},
+        {s:'&#127875;',a:'Build for Q4',ac:'asc',conf:'High',note:'<strong>Coef 1.04.</strong> Average demand month. Use Oct to ramp budget gradually for Nov, train tROAS bids, prep BFCM creative.'},
+        {s:'&#127873;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>TRUE PEAK &mdash; coef 1.99.</strong> 2&times; annual average. BF/CM + luxury gift-buying + year-end home renovation budgets converge. ROAS compresses (~4.05&times;) but volume + new-customer acquisition is unmatched. Push hardest here.'},
+        {s:'&#127876;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.21 &mdash; secondary peak.</strong> Holiday gifting tail. Margin compresses to 29.8% but ROAS strong (7.52&times; in 2025). Taper after Dec 15 shipping deadline.'},
+      ],
+      INSIGHTS:{
+        opp:[
+          '<strong>November is the biggest annual lever.</strong> v2 Nov coef 1.99 (was 1.51 in v1) &mdash; we were under-budgeting the most important month. Plan inventory, creative, BFCM offers by August. Aim for $3M+ revenue in Nov 2026 (vs $1.93M in 2025).',
+          '<strong>August stays the efficiency window.</strong> 10.32&times; ROAS in 2025 on $107k spend. POAS 4.32. Channel undercounts 63%. Push to $150k+ spend at same tROAS &mdash; should produce $1.5M+ revenue.',
+          '<strong>Dec is bigger than v1 said (1.21 coef vs 0.89).</strong> Holiday gifting + post-BF momentum. 2025 ROAS 7.52&times; (year-2-best). Scale through Dec 23.',
+          '<strong>Sept is above-average, not flat (1.08 coef).</strong> v1 had Sept as "Hold" but it\'s a genuine scale window. ROAS 7.00&times; in 2025, margin 38.9%. Push budget +10-15%.',
+        ],
+        risk:[
+          '<strong>v1 dashboard recommendations were inverted on multiple months.</strong> April was "Scale" but is actually a trough. June was "Reduce" but is actually moderate. If anyone is still operating on v1 actions, fix immediately.',
+          '<strong>January is the deepest trough (0.53 coef).</strong> Post-holiday returns + soft luxury intent. POAS 1.79, margin 23.6%. <strong>Cut 30-40%</strong> &mdash; v1 said 25% but the v2 math says deeper. Save for May/Aug/Nov.',
+          '<strong>Spring is NOT the brand\'s peak season.</strong> Feb-Apr coefs 0.85, 0.66, 0.64 (all below average). Only May at 1.15 is a true scale month. Don\'t budget spring like Q4.',
+          '<strong>4&times; account growth is real but doesn\'t change seasonality.</strong> The PATTERN holds even as scale grows. Plan budget against v2 coefficients, not against last-month\'s revenue (which mixes growth + season).',
+        ],
+        tactic:[
+          '<strong>tROAS calibration by season (revised):</strong> Nov &rarr; 3.5&times; (push volume), Dec &rarr; 5.0&times;, Aug-Sep &rarr; 7.0&times; (efficiency), May &rarr; 5.0&times;, Jan-Apr trough &rarr; 4.0&times; (defensive).',
+          '<strong>Day-of-week pattern (unchanged from v1):</strong> Mon-Tue $16k/day at 11.5&times; ROAS; Sat-Sun $10k/day at 7.7&times;. Add +10% Mon-Tue bid mod, &minus;15% weekend.',
+          '<strong>AOV swings $700+ between months.</strong> May AOV $2,746 (year high). Push premium catalogs in May. In Q4 expect AOV compression (~$2,050) due to gift-price-point buyers.',
+          '<strong>Annotations needed:</strong> Methodology change in dashboard is documented. Update any old planning docs that referenced the v1 "Apr spring spike" or "Jun trough" narrative &mdash; both were artifacts of growth contamination.',
+        ],
+      },
+    },
+  },
+
+  // -------------------- SIMPLY GOOD COFFEE --------------------
+  'simply-good-coffee': {
+    name: 'Simply Good Coffee',
+    em: 'Coffee',
+    sub: 'Plastic-Free Coffee Makers &middot; True Seasonality (detrended, 3-yr TW blended) &middot; 1,114 days of data &middot; v2 methodology',
+    badge: 'WRK MARKETING &middot; SEASONALITY INTELLIGENCE',
+    accent: '#a16b3f', accent2: '#d4a574', accent3: '#6b4524',
+    ready: true,
+    meta: ['1,114 days TW blended','3 full years (May 23&ndash;May 26)','Detrended 365d rolling','60-93 obs/month','Cross-validated vs Trends','v2: growth stripped'],
+    kpis: [
+      {label:'True Peak', val:'Dec', color:'#10b981', sub:'1.68 coeff &middot; Nov 1.47 &middot; Holiday demand'},
+      {label:'True Trough', val:'Apr', color:'#ef4444', sub:'0.62 coeff &middot; May 0.66 &middot; Spring slump'},
+      {label:'Best Margin Month', val:'Apr', color:'var(--accent)', sub:'POAS 1.72&times; &middot; counter-cyclical'},
+      {label:'Hidden Value', val:'Jun&ndash;Jul', color:'#f59e0b', sub:'Coef 1.16/1.10 + POAS 2.0+'},
+    ],
+    data: {
+      // v2 SEASONALITY: detrended via 365-day rolling mean, 3 years TW blended data
+      // This isolates pure seasonality from account hypergrowth (2023 $540k -> 2026 $24M+ trajectory)
+      COEFF:[0.930,1.038,0.741,0.618,0.657,1.159,1.095,0.859,0.794,0.963,1.467,1.680],
+      // Most recent year per month (Jan-May 2026, Jun-Dec 2025) — actual TW blended revenue
+      REV:[1561036,2228263,1981730,2187886,2812000,621469,699555,970940,830650,850575,1326556,1461554],
+      SPEND:[361086,540791,483338,489009,522565,126145,139455,228883,209026,206291,296028,351243],
+      ROAS:[4.32,4.12,4.10,4.47,5.38,4.93,5.02,4.24,3.97,4.12,4.48,4.16],
+      CH_ROAS:[3.54,3.41,3.35,2.73,2.25,3.71,3.62,3.18,2.76,2.71,3.16,3.03],
+      POAS:[1.97,1.82,1.76,2.15,2.74,2.02,2.23,1.69,1.57,1.68,1.98,1.86],
+      MARGIN:[45.7,44.1,42.9,48.0,50.9,41.0,44.5,39.9,39.4,40.7,44.3,44.6],
+      ORDERS:[5858,7569,6975,6925,8795,3011,3208,3835,3270,3599,5294,5792],
+      NEW_ORDERS:[4416,5739,4783,4405,4126,2389,2582,3142,2556,2825,4416,4661],
+      AOV:[266,294,284,316,307,206,218,253,254,236,251,252],
+      CVR:[1.15,0.99,1.11,1.49,2.14,1.56,1.84,1.36,1.80,1.94,1.79,1.29],
+      NCPA:[82,94,101,111,121,53,54,73,82,73,67,75],
+      NEW_IDX:[1.151,1.496,1.247,1.148,1.076,0.623,0.673,0.819,0.666,0.736,1.151,1.215],
+      GAP:[22.0,20.8,22.4,63.7,139.1,32.9,38.7,33.3,43.8,52.0,41.8,37.3],
+      REV_2024:[117218,101391,107938,101156,123439,170174,176973,138694,101487,211301,349379,296976],
+      REV_2025:[114556,179407,190137,148241,187976,621469,699555,970940,830650,850575,1326556,1461554],
+      REV_2026:[1561036,2228263,1981730,2187886,2812000,null,null,null,null,null,null,null],
+      ROAS_2024:[3.06,2.94,2.75,3.31,3.50,3.12,2.81,2.44,2.96,2.32,2.31,3.57],
+      ROAS_2025:[3.65,3.44,3.92,4.46,4.07,4.93,5.02,4.24,3.97,4.12,4.48,4.16],
+      ROAS_2026:[4.32,4.12,4.10,4.47,5.38,null,null,null,null,null,null,null],
+      // Counter-cyclical margin pattern (3-yr detrended POAS averages)
+      POAS_SEASONAL:[1.65,1.34,1.37,1.72,1.21,0.95,1.08,1.28,1.01,0.88,0.97,1.21],
+      MARGIN_SEASONAL:[34.4,32.9,33.1,38.0,25.1,12.4,-3.6,23.1,23.9,21.4,25.7,30.6],
+      // OLD (v1) TTM-derived coefficients - kept for transparency / methodology comparison
+      COEFF_V1_TTM:[1.075,1.535,1.365,1.507,1.859,0.428,0.482,0.669,0.572,0.586,0.914,1.007],
+      // Google Trends live data &mdash; 5-year monthly avg from pytrends
+      GT_CAT_1:[30.5,27.6,28.3,35.4,27.4,24.0,25.7,25.4,24.5,26.9,39.2,38.8],
+      GT_CAT_2:[9.4,13.4,19.8,17.7,9.2,3.4,5.0,6.8,4.6,6.0,16.8,12.9],
+      GT_CAT_1_LABEL:'"coffee maker" (5-yr avg)',
+      GT_CAT_2_LABEL:'"plastic free coffee maker" (5-yr avg)',
+      // Day-of-week: TW blended, all 3 years, ~159 days each
+      DOW:[
+        {d:'MON',rev:17208,roas:4.15},
+        {d:'TUE',rev:16257,roas:4.10},
+        {d:'WED',rev:16312,roas:4.18},
+        {d:'THU',rev:16263,roas:3.88},
+        {d:'FRI',rev:18319,roas:4.05},
+        {d:'SAT',rev:19280,roas:3.94},
+        {d:'SUN',rev:19795,roas:3.95},
+      ],
+      BUDGET_ACTIONS:['Scale','Scale','Hold','Margin-Play','Margin-Play','Scale','Scale','Hold','Reduce','Build for Q4','Max Scale','Max Scale'],
+      EXEC_SUMMARY:'<strong>v2 Update (3-yr detrended TW data, 1,114 days):</strong> Earlier dashboard read the account\'s hypergrowth trajectory as seasonality. Corrected analysis isolates pure seasonality from growth and shows a <strong>classic Q4-peaked ecom pattern</strong>: <strong>Dec (1.68) and Nov (1.47)</strong> are the true peaks, with a secondary <strong>summer mini-peak (Jun 1.16, Jul 1.10)</strong>. <strong>Apr (0.62) and May (0.66) are the seasonal troughs.</strong> The big insight: margins are <strong>counter-cyclical</strong> &mdash; the highest POAS months are the low-volume ones (Apr 1.72&times;, Jan 1.65&times;, Mar 1.37&times;), while Q4 volume comes with thinner margins due to promo-heavy buying. <strong>This is a hypergrowth account ($540k 2023 &rarr; $24M+ 2026 trending)</strong>, so recent-year revenue numbers stay record-breaking every month &mdash; but those are growth, not seasonality. The attribution gap (Google undercounts TW by 20&ndash;140% monthly) remains a portfolio-wide pattern.',
+      FINDINGS:[
+        {cls:'fg',title:'True Peak Is Q4 (Holiday Coffee Gifting)',text:'<strong>Nov 1.47 &middot; Dec 1.68</strong>. Detrended from 3 years of daily blended data. This matches Google Trends "coffee maker" peaks (Nov 39.2, Dec 38.8) almost exactly. Q4 is structural demand &mdash; gift purchases for the morning-coffee-lover demographic. Max-scale this window.'},
+        {cls:'fa',title:'Counter-Cyclical Margins (The Profit Hides In Spring)',text:'<strong>Apr POAS 1.72&times;, Jan 1.65&times;, May 1.21&times; (50.9% margin)</strong>. Low-demand months have the highest profit per dollar spent &mdash; buyers are full-price, premium-AOV ($316 in Apr), no Black Friday discounting. <strong>Push margin-rich products in spring, not volume.</strong> Hidden profit lever.'},
+        {cls:'fg',title:'Summer Mini-Peak Is Real',text:'<strong>Jun 1.16 &middot; Jul 1.10</strong>. Both above-average. Father\'s Day + iced coffee + summer entertaining. Validated by Google Trends summer plateau and TW data showing Jun-Jul as #3&ndash;#4 seasonal months. <strong>Scale through summer &mdash; this is not a trough as previous analysis suggested.</strong>'},
+        {cls:'fr',title:'V1 Methodology Error: Read Growth As Season',text:'Previous version said May was the peak (coef 1.86) and June the trough (0.43). Wrong: those numbers reflected the account\'s 4&times; scale jump in Jun 2025, not seasonality. The TTM approach compared mature months (Feb-May 2026) against pre-scale months (Jun-Sep 2025). v2 fixes this by detrending against a 365-day rolling mean before extracting season.'},
+        {cls:'fv',title:'Spring 2026 Revenue Records Are Growth, Not Season',text:'Feb 2026 $2.23M, Apr 2026 $2.19M, May 2026 (annualized) $2.81M are real records &mdash; but these are <strong>growth-driven</strong>, not seasonal peaks. YoY: Feb +1142%, Apr +1376%. Once growth stabilizes, expect Q4 to deliver the biggest absolute revenue. Plan capacity accordingly.'},
+        {cls:'fa',title:'Sept Is The Real Annual Trough',text:'<strong>Sep 0.79 coef + POAS 1.57 + lowest YoY momentum.</strong> Demand softens post-summer before Q4 pickup. Don\'t scale into Sept &mdash; use it for testing, list-building, and prepping Black Friday creative.'},
+      ],
+      MONTH_META:[
+        {s:'&#10052;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 0.93</strong> (slightly below avg). Best POAS season: <strong>1.97&times;</strong>, margin 45.7%. New-year intent + gift card redemption. Scale moderately on margin, not volume.'},
+        {s:'&#127801;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.04.</strong> Above-avg demand returning. POAS 1.82&times;. Valentine\'s gift bump in coffee category. Steady scale.'},
+        {s:'&#127793;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.74</strong> &mdash; spring slowdown begins. ROAS holds 4.10&times;, margin 42.9%. Hold spend, focus on creative refresh ahead of Apr-May.'},
+        {s:'&#127800;',a:'Margin Play',ac:'asc',conf:'High',note:'<strong>True trough (0.62)</strong> BUT highest POAS (2.15&times;) and AOV ($316). Premium buyers, no promo competition. <strong>Push margin-rich products, not volume.</strong>'},
+        {s:'&#9728;',a:'Margin Play',ac:'asc',conf:'High',note:'<strong>Coef 0.66 (seasonal trough)</strong> BUT 50.9% margin, 2.74&times; POAS, 5.38&times; ROAS. Memorial Day + Mother\'s Day buyers are high-quality. Push margin, not volume.'},
+        {s:'&#127956;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.16 (mini-peak).</strong> Father\'s Day + iced coffee season. ROAS 4.93&times;, POAS 2.02&times;. NCPA only $53. Scale aggressively.'},
+        {s:'&#127754;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.10.</strong> Summer continues. ROAS 5.02&times; (highest in TTM), NCPA $54. Hidden value window &mdash; account historically underspends here.'},
+        {s:'&#127807;',a:'Hold',ac:'aho',conf:'Medium',note:'<strong>Coef 0.86.</strong> Demand fading post-summer. ROAS 4.24&times;, POAS 1.69&times;. Maintain spend, no new bets.'},
+        {s:'&#127794;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Annual trough (0.79).</strong> ROAS 3.97&times; (year low), POAS 1.57&times;. Reduce -10&ndash;15%, save dry powder for Q4 build.'},
+        {s:'&#127875;',a:'Build for Q4',ac:'asc',conf:'High',note:'<strong>Coef 0.96.</strong> Pre-holiday build. Ramp budget gradually, test BF creative, build retargeting pools. Margin still thin (40.7%).'},
+        {s:'&#127873;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.47</strong> &mdash; TRUE PEAK MONTH #2. Black Friday/Cyber Monday. Push budget to the wall. Watch margin compression from promo activity.'},
+        {s:'&#127876;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.68 &mdash; TRUE PEAK.</strong> Holiday gifting season. Highest absolute revenue + decent 44.6% margin. Max-scale through Dec 23.'},
+      ],
+      INSIGHTS:{
+        opp:[
+          '<strong>Build Q4 capacity NOW.</strong> True seasonality says Nov+Dec deliver the biggest demand pull (coef 1.47+1.68). Combined with account hypergrowth, Nov-Dec 2026 will be the biggest months in history. Lock budget, creative, and inventory plans by Aug.',
+          '<strong>Counter-cyclical margin play (Jan, Mar, Apr).</strong> POAS 1.65&ndash;1.72&times;, no promo competition, premium AOV ($316 in Apr). Don\'t reduce spend in these "trough" months &mdash; instead, push margin-rich products (brewers over accessories). Profit per dollar is at its highest here.',
+          '<strong>Don\'t under-scale summer.</strong> Jun coef 1.16, Jul 1.10 are real above-average months. POAS 2.0&times;+ in both. The account has historically been timid in summer &mdash; this is uncompensated efficiency.',
+          '<strong>Memorial Day momentum is real but not because May is peak season.</strong> May coef is actually 0.66. The strong May 2026 results come from growth + holiday spike + Mother\'s Day. Keep pushing &mdash; just don\'t expect the same coefficient pattern in flat-growth conditions.',
+        ],
+        risk:[
+          '<strong>v1 dashboard recommendations were inverted.</strong> If anyone is still operating on "May is peak / Jun is trough" plans, fix immediately. Anyone budgeted to scale-down Jul or scale-up Apr is on the wrong signal.',
+          '<strong>July margin collapse.</strong> Detrended POAS in July is 1.08&times; (low end) and margin compresses to -3.6% due to summer promo activity. Volume is up, but profit per dollar drops. Cap discount depth or you\'ll grow revenue while killing profit.',
+          '<strong>Q4 margins thin out (Oct&ndash;Nov).</strong> POAS drops to 0.88&ndash;0.97&times;. Sales come in but BF/CM promo cuts deep. This is acceptable for customer acquisition (NCPA stays competitive) but watch overall profit margin.',
+          '<strong>Account still hypergrowing.</strong> 2026 trending $24M+ vs $7.6M in 2025. As growth stabilizes, expect the v2 seasonal coefficients to dominate more visibly. Re-check the model annually to validate the pattern is holding.',
+        ],
+        tactic:[
+          '<strong>Weekend lift (+18%) confirmed in 3-yr TW data.</strong> Sun $19,795/day, Sat $19,280, Fri $18,319 vs Mon-Thu $16-17k. Add +10&ndash;15% Sat-Sun bid modifiers across non-brand campaigns.',
+          '<strong>Google undercounts by 20&ndash;140% every month.</strong> Use TW for all budget decisions. Especially in May where the gap hits +139% &mdash; never trust Google ROAS alone in this window.',
+          '<strong>tROAS by season (revised):</strong> Q4 (Nov-Dec) &rarr; 3.8&times; (push volume), Spring trough (Apr-May) &rarr; 4.8&times; (protect margin), Summer (Jun-Jul) &rarr; 4.5&times; (scale aggressively), Sept &rarr; 5.0&times; (efficiency-only).',
+          '<strong>Trends data confirms v2 seasonality.</strong> "Coffee maker" Trends peaks Nov 39.2 and Dec 38.8 (matching our Dec/Nov coefficient peaks). "Plastic free coffee maker" peaks Mar-Apr (category awareness) and Nov (purchase intent). Demand is real, not just account artifact.',
+        ],
+      },
+    },
+  },
+
+  // -------------------- IRON NECK --------------------
+  'iron-neck': {
+    name: 'Iron Neck',
+    em: 'Neck Training',
+    sub: 'Neck Strengthening &amp; Pain Relief &middot; Q4-Peaked DTC Fitness &middot; 1,096 days TW blended &middot; v1 (account in 3-yr decline)',
+    badge: 'WRK MARKETING &middot; SEASONALITY INTELLIGENCE',
+    accent: '#4a5568', accent2: '#a0aec0', accent3: '#2d3748',
+    ready: true,
+    meta: ['1,096 days TW blended','3 full years (May 23&ndash;May 26)','Detrended 365d rolling','60&ndash;93 obs/month','Trends + GA cross-val','9/10 confidence'],
+    kpis: [
+      {label:'True Peak', val:'Nov', color:'#10b981', sub:'2.20 coef &middot; 2.2&times; annual avg'},
+      {label:'True Trough', val:'Sep', color:'#ef4444', sub:'0.65 coef &middot; Apr 0.70'},
+      {label:'Best Margin Month', val:'Apr', color:'var(--accent)', sub:'POAS 1.97&times; &middot; 45.1% margin'},
+      {label:'Account Status', val:'Declining', color:'#f59e0b', sub:'Nov 23 $1.83M &rarr; Nov 25 $684k (-63%)'},
+    ],
+    data: {
+      // SEASONALITY: detrended via 365-day rolling mean of TW blended revenue
+      COEFF:[1.096,0.933,0.721,0.702,0.759,0.783,0.850,0.726,0.646,0.889,2.198,1.695],
+      // Most recent year per month (Jan-Apr 2026 actual, May 2026 shape-adjusted, Jun-Dec 2025) — TW blended
+      // May 2026 used May 2025 intra-month shape (51.3% of revenue in days 1-19) for annualization
+      REV:[286675,284479,337825,327356,382331,382879,379406,325907,306766,369752,683547,562870],
+      SPEND:[94926,78155,89379,71127,83308,130580,127657,98903,96888,127912,263961,182562],
+      ROAS:[3.02,3.64,3.78,4.60,4.59,2.93,2.97,3.30,3.17,2.89,2.59,3.08],
+      CH_ROAS:[3.12,2.34,2.47,2.55,2.41,1.57,1.66,2.16,1.87,1.58,2.20,2.79],
+      POAS:[1.20,1.78,1.85,2.55,2.52,1.08,1.04,1.31,1.30,1.05,0.79,1.21],
+      MARGIN:[39.6,49.0,48.8,55.4,54.8,36.9,34.8,39.8,41.2,36.5,30.6,39.1],
+      ORDERS:[1481,1721,2308,2134,2704,2193,2408,1817,1741,2014,3059,3081],
+      NEW_ORDERS:[1215,1446,1925,1737,2162,1900,2104,1514,1457,1618,2621,2639],
+      AOV:[194,165,146,153,141,175,158,179,176,184,223,183],
+      // Conversion rate % (orders / clicks * 100) - rendered in CVR chart
+      CVR:[1.97,2.57,3.32,3.69,4.35,2.16,3.13,2.74,2.51,2.17,1.23,1.31],
+      // New customer index (NEW_ORDERS / avg NEW_ORDERS) - rendered in performance table
+      NEW_IDX:[0.65,0.78,1.03,0.93,1.16,1.02,1.13,0.81,0.78,0.87,1.41,1.42],
+      // New customer CPA (ncpa from TW) - rendered in NCPA chart
+      NCPA:[78,54,46,41,39,69,61,65,67,79,101,69],
+      NEW_PCT:[82.1,83.6,83.4,82.5,82.5,85.4,84.5,82.9,81.8,82.4,85.8,83.4],
+      DISC_PCT:[5.0,4.0,3.9,3.7,5.6,4.0,11.0,7.1,5.1,5.1,1.8,3.2],
+      // Attribution gap: (TW ROAS - Google ROAS) / Google ROAS * 100
+      GAP:[-3,56,53,81,90,87,79,53,70,83,18,10],
+      // 3-yr seasonal (detrended daily averages — counter-cyclical insight, not currently charted)
+      POAS_SEASONAL:[1.70,1.70,1.93,1.97,1.64,1.61,1.61,1.93,1.87,1.34,1.09,1.32],
+      MARGIN_SEASONAL:[34.6,42.6,43.7,45.1,40.9,41.7,40.3,44.3,46.1,38.3,35.0,38.2],
+      // YoY revenue arrays (May 2026 = shape-adjusted)
+      REV_2024:[550978,430451,375576,390416,409011,356785,420859,338735,327576,375325,890585,974493],
+      REV_2025:[847528,564156,420741,357597,388914,382879,379406,325907,306766,369752,683547,562870],
+      REV_2026:[286675,284479,337825,327356,382331,null,null,null,null,null,null,null],
+      ROAS_2024:[2.01,3.12,3.87,3.42,2.97,3.36,4.08,3.35,3.66,3.60,3.11,3.61],
+      ROAS_2025:[5.01,4.09,3.82,4.04,3.15,2.93,2.97,3.30,3.17,2.89,2.59,3.08],
+      ROAS_2026:[3.02,3.64,3.78,4.60,4.59,null,null,null,null,null,null,null],
+      // Google Trends 5-yr monthly avgs
+      GT_CAT_1:[15.4,16.9,19.4,25.6,13.2,12.9,13.2,11.7,13.3,12.0,13.9,14.0],
+      GT_CAT_2:[13.1,14.8,17.8,25.4,15.4,14.0,15.3,15.8,13.5,12.7,13.7,13.8],
+      GT_CAT_1_LABEL:'"neck strengthening" (5-yr avg)',
+      GT_CAT_2_LABEL:'"neck pain relief" (5-yr avg)',
+      // Day-of-week: TW blended, 3 yrs, ~157 days each
+      DOW:[
+        {d:'MON',rev:18260,roas:3.45},
+        {d:'TUE',rev:16865,roas:3.51},
+        {d:'WED',rev:16660,roas:3.47},
+        {d:'THU',rev:15697,roas:3.36},
+        {d:'FRI',rev:18278,roas:3.50},
+        {d:'SAT',rev:15463,roas:3.05},
+        {d:'SUN',rev:16646,roas:3.08},
+      ],
+      BUDGET_ACTIONS:['Scale','Hold','Margin Play','Max Margin','Hold','Hold','Caution','Margin Play','Build for Q4','Build for Q4','Max Scale','Max Scale'],
+      EXEC_SUMMARY:'Iron Neck is a <strong>classic Q4-peaked DTC fitness product</strong> (Nov 2.20, Dec 1.70 detrended coefficients) selling a single-use head harness. <strong>But the account is in sustained 3-year decline:</strong> Nov 2023 $1.83M &rarr; Nov 2025 $684k (-63%); revenue is halving roughly every 1-1.5 years. Margin is <strong>counter-cyclical</strong> &mdash; low-volume Apr/Sep deliver the highest POAS (1.97&times;/1.87&times;), while Q4 sells volume at thin margins (Nov POAS 1.09&times;). The 2025 summer discount sledgehammer (Jul 19% of revenue in discounts) <strong>failed to reverse the decline</strong>. New-customer mix is exceptionally high (80-87% every month) confirming this is a <strong>single-purchase product</strong> with no LTV runway &mdash; every declining traffic month = immediately declining revenue. Spend cut in 2026 has restored margin (Apr POAS 2.55&times;, 55% margin) at half the revenue. Long consideration cycle: Google Trends peaks April (research), revenue peaks November (purchase).',
+      FINDINGS:[
+        {cls:'fg',title:'True Peak Is Massive Q4',text:'<strong>Nov coef 2.20 &middot; Dec 1.70 &middot; Jan 1.10</strong>. Nov is 2.2&times; the annual average &mdash; one of the steepest seasonal patterns in the portfolio. Gift-friendly premium fitness product (head-mounted harness, ~$300+). 3 years of detrended TW blended confirms this is structural demand.'},
+        {cls:'fr',title:'Account In Sustained 3-Year Decline',text:'Nov 2023 <strong>$1.83M</strong> &rarr; Nov 2024 <strong>$891k</strong> &rarr; Nov 2025 <strong>$684k</strong> (-63% over 24 months). Same downtrend across every month. Total annual revenue is approximately halving every 1&ndash;1.5 years. This is structural &mdash; not seasonal noise.'},
+        {cls:'fa',title:'Counter-Cyclical Margin Pattern',text:'<strong>Apr POAS 1.97&times; (45.1% margin), Sep 1.87&times; (46.1% margin) &mdash; the LOW-volume months.</strong> Nov POAS only 1.09&times; (35.0% margin) &mdash; the HIGH-volume month. Q4 trades margin for volume (BFCM promo + new-customer push). Q2/Q3 sells at full margin to fewer high-quality buyers.'},
+        {cls:'fg',title:'April Is The Quality-Buyer Window',text:'Coef 0.70 (seasonal trough) BUT POAS 1.97&times;, margin 45.1%, AOV $179. April 2026 spike: POAS hit 2.55&times;, 55.4% margin. This is the brand\'s most profitable window despite being a revenue trough &mdash; quality intent buyers, no promo competition, full-margin sales.'},
+        {cls:'fr',title:'Single-Purchase Product Reality',text:'<strong>80&ndash;87% new customers EVERY MONTH.</strong> Most brands run 30&ndash;50% new. Iron Neck buyers don\'t repeat &mdash; you buy one $300 neck harness for life. <strong>No LTV recovery mechanism.</strong> Declining ad traffic = immediately declining revenue. Must fix top-of-funnel acquisition or accept continued decline.'},
+        {cls:'fa',title:'Summer 2025 Discount Sledgehammer Failed',text:'Jul 2025 hit <strong>19% discount rate</strong> (vs typical 3&ndash;5%), Aug 14.8%. Revenue still <strong>declined YoY</strong> ($461k 2023 &rarr; $421k 2024 &rarr; $379k 2025). The discount strategy didn\'t fix the demand problem &mdash; it just cut margin. Stop trying to discount-out of a structural decline.'},
+      ],
+      MONTH_META:[
+        {s:'&#10052;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.10 &mdash; secondary peak.</strong> NY resolutions + post-holiday gift cards. POAS 1.70&times; (avg), margin 34.6%. 2025 hit $848k (best Jan ever). Push spending while intent is high.'},
+        {s:'&#128150;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.93.</strong> Post-Q4 normalization. POAS 1.70&times;, margin improves to 42.6%. Steady maintenance month.'},
+        {s:'&#127793;',a:'Margin Play',ac:'asc',conf:'High',note:'<strong>Coef 0.72 &mdash; seasonal slow.</strong> POAS 1.93&times;, margin 43.7%. Lower volume but high-quality buyers. 2026 hit 1.85&times; POAS at half the spend. Push margin not volume.'},
+        {s:'&#127800;',a:'Max Margin',ac:'asc',conf:'High',note:'<strong>Coef 0.70 (annual trough) BUT BEST POAS 1.97&times;, 45.1% margin.</strong> 2026 hit POAS 2.55&times; (record). Quality intent buyers, no discount pressure, full-margin sales. Don\'t reduce spend &mdash; protect this window.'},
+        {s:'&#9728;',a:'Hold',ac:'aho',conf:'Medium',note:'<strong>Coef 0.76.</strong> POAS 1.64&times;, margin 40.9%. Discount rate creeps up (5.6%). Mother\'s Day mild lift. Steady, no big bets.'},
+        {s:'&#127956;',a:'Hold',ac:'aho',conf:'Medium',note:'<strong>Coef 0.78.</strong> POAS 1.61&times;, margin 41.7%. Father\'s Day mild bump. Summer slowdown begins.'},
+        {s:'&#127754;',a:'Caution',ac:'are',conf:'High',note:'<strong>Coef 0.85.</strong> &#9888;&#65039; 2025 discount rate hit <strong>19%</strong> and revenue still dropped YoY. POAS only 1.61&times;. <strong>Cap discount depth &lt;7% or skip promos entirely.</strong>'},
+        {s:'&#127825;',a:'Margin Play',ac:'asc',conf:'High',note:'<strong>Coef 0.73.</strong> POAS 1.93&times;, margin 44.3%. Quality summer window when discount discipline holds. Don\'t flood the market with promos.'},
+        {s:'&#127810;',a:'Build for Q4',ac:'asc',conf:'High',note:'<strong>ANNUAL TROUGH (coef 0.65).</strong> But POAS 1.87&times; (highest), margin 46.1%. Don\'t cut spend &mdash; build BFCM retargeting pools, test new Q4 creative, capture spring researchers ahead of buying window.'},
+        {s:'&#127875;',a:'Build for Q4',ac:'asc',conf:'High',note:'<strong>Coef 0.89 &mdash; pre-Q4 ramp.</strong> POAS drops to 1.34&times; (BFCM prep). Begin scaling budget gradually. Test creative variations. Margins thin out from here.'},
+        {s:'&#127873;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>TRUE PEAK (coef 2.20). 2.2&times; annual average.</strong> POAS only 1.09&times; (margin compressed to 35%) BUT massive volume. 85.8% new customers. Push budget to the wall. This single month = year-defining results.'},
+        {s:'&#127876;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.70 &mdash; secondary peak.</strong> POAS 1.32&times;, margin 39.1%. Holiday gifting. Push through Dec 23. Account historically delivers consistent Dec performance even as Nov varies.'},
+      ],
+      INSIGHTS:{
+        opp:[
+          '<strong>Q4 capacity build (the only window that matters).</strong> Nov + Dec combined = 3.9x of average month. Plan creative, budget, inventory by Sept. The brand\'s annual outcome is decided in 8 weeks.',
+          '<strong>April-September margin focus.</strong> Six straight months of POAS 1.6&ndash;2.0&times; with margins 40&ndash;46%. Don\'t reduce spend just because revenue is "low" &mdash; profit is at its highest here. Push margin-rich product variants (Pro, Alpha).',
+          '<strong>Brand search is the entire economic engine.</strong> "iron neck" alone = $688k/yr (51% of total revenue) at 23.7&times; ROAS. Joe Rogan halo terms ("joe rogan iron neck") at 46&ndash;48&times;. Lock down brand bidding, protect from competitor poaching.',
+          '<strong>Pause/reduce losing non-brand channels.</strong> Shopping NB 1.73&times;, Search NB 1.35&times;, Video DG 0.77&times;, Demand Gen 1.70&times;. Combined waste: ~$55k/yr. Reallocate to PMax Brand or test new audience angles.',
+        ],
+        risk:[
+          '<strong>3-year decline is structural, not cyclical.</strong> Revenue halving every 18 months. Without intervention (new product, new audience, new positioning), Nov 2026 will be ~$340k. The seasonality coefficients tell you WHEN to spend; they don\'t fix the demand problem.',
+          '<strong>Single-purchase product caps growth.</strong> 80-87% new customer mix every month confirms no LTV runway. The business model depends entirely on new-customer acquisition flow. If CAC rises or top-of-funnel breaks, revenue collapses immediately.',
+          '<strong>Heavy discounting doesn\'t work.</strong> July 2025: 19% discount rate, revenue still down YoY. Stop trying to promo-out of a structural problem &mdash; it only cuts margin.',
+          '<strong>Account-reported ROAS misleading by +80&ndash;100% most months.</strong> Google channel-ROAS averages ~2&times;, blended TW ~4&times;. Decisions made on Google-only views will systematically underinvest.',
+        ],
+        tactic:[
+          '<strong>Friday + Monday lift.</strong> Mon $18,260/d (3.45&times;), Fri $18,278/d (3.50&times;) &mdash; the standouts. Sat $15,463 / 3.05&times; is weakest. <strong>+10% Mon/Fri bid mod, -10% Saturday.</strong>',
+          '<strong>Spring search, fall purchase.</strong> Google Trends peaks April (neck training 19, strengthening 26, pain relief 25). Revenue peaks November. Long consideration cycle. <strong>Use Apr-May for retargeting list-building and email capture, save direct-response budget for Sept-Dec close.</strong>',
+          '<strong>tROAS by season:</strong> Q4 (Nov-Dec) &rarr; 2.5&times; (push volume), Mar-Apr &rarr; 4.0&times; (protect margin), Jul-Aug &rarr; 3.5&times; (cap discounts), Sept &rarr; 4.5&times; (efficiency build). Don\'t use one annual tROAS.',
+          '<strong>Joe Rogan halo is real ($2,800/$58 = 47.9&times;).</strong> Audit ad creative for podcast-mention angle. The product has earned media value that should be amplified in paid creative.',
+        ],
+      },
+    },
+  },
+
+  // -------------------- POPFLEX --------------------
+  'popflex': {
+    name: 'POPFLEX Activewear',
+    em: 'Activewear',
+    sub: 'Cassey Ho &middot; Pilates &amp; Activewear &middot; 3yr TW Blended ($139M rev) &middot; Account growing 16-53% YoY',
+    badge: 'WRK MARKETING &middot; SEASONALITY INTELLIGENCE',
+    accent: '#ec4899', accent2: '#fbcfe8', accent3: '#9d174d',
+    ready: true,
+    meta: ['1,096 days TW (Jan 23&ndash;Dec 25)','3 complete years','Within-year normalized','MER only 4.3%','Net margin 59.3%','v2 corrected'],
+    kpis: [
+      {label:'True Peak', val:'Nov', color:'#10b981', sub:'2.06 coef &middot; BFCM = 2&times; avg month'},
+      {label:'True Trough', val:'Jan-Jul', color:'#ef4444', sub:'~0.72-0.80 &middot; flat off-peak'},
+      {label:'Best Margin Month', val:'Aug', color:'var(--accent)', sub:'POAS 23.1&times; &middot; 60.8% margin'},
+      {label:'Account Status', val:'Growing', color:'#10b981', sub:'2024 +53% &middot; 2025 +16% YoY'},
+    ],
+    data: {
+      // SEASONALITY v2 CORRECTED: within-year normalized (2024+2025). The earlier median-detrend
+      // edge-trimmed Nov-Dec 2025 (incl. the $9.98M Nov), falsely showing Mar as peak. November is
+      // unambiguously the peak (2x an average month, every year — BFCM concentration).
+      COEFF:[0.714,0.718,0.957,1.006,0.993,1.080,0.805,0.986,0.993,0.769,2.057,0.922],
+      COEFF_V1_BAD:[0.914,1.021,1.169,1.093,1.016,1.088,0.811,0.863,0.974,0.983,1.101,0.967],
+      // 2025 full-year TW blended numbers (cleanest recent year)
+      REV:[3807284,3766697,4967882,4071004,4184506,4592731,3819471,5652251,3921888,4734259,9976486,4289557],
+      SPEND:[145193,174478,193091,118173,136906,144251,122234,148619,174882,232799,418583,255289],
+      ROAS:[26.22,21.59,25.73,34.45,30.56,31.84,31.25,38.03,22.43,20.34,23.83,16.80],
+      CH_ROAS:[18.06,15.87,15.83,15.10,15.67,15.81,28.41,17.37,15.84,12.48,13.12,8.18],
+      POAS:[15.45,12.67,15.11,19.76,17.72,19.34,16.76,23.13,12.13,11.28,14.10,8.17],
+      MARGIN:[58.9,58.7,58.7,57.4,58.0,60.7,53.6,60.8,54.1,55.5,59.2,48.6],
+      ORDERS:[30986,29982,42088,37436,39053,37611,33118,44984,35746,39543,79902,43873],
+      NEW_ORDERS:[14766,14360,20317,14075,12192,13605,12938,15252,13439,14034,30671,21807],
+      AOV:[132,134,127,118,116,132,125,130,122,132,132,110],
+      CVR:[1.20,1.31,1.48,1.71,1.71,1.37,1.40,2.09,1.88,2.26,1.92,1.99],
+      NEW_IDX:[0.90,0.87,1.23,0.86,0.74,0.83,0.79,0.93,0.82,0.85,1.86,1.33],
+      NCPA:[10,12,10,8,11,11,9,10,13,17,14,12],
+      NEW_PCT:[47.7,47.9,48.3,37.6,31.2,36.2,39.1,33.9,37.6,35.5,38.4,49.7],
+      DISC_PCT:[9.7,7.6,7.0,9.8,8.5,7.4,12.5,5.5,11.0,8.5,4.6,15.1],
+      // Attribution gap: TW ROAS vs Google channel-reported ROAS
+      GAP:[45,36,63,128,95,101,10,119,42,63,82,105],
+      // 3-yr seasonal POAS & margin (counter-cyclical pattern)
+      POAS_SEASONAL:[19.01,17.31,16.29,17.69,15.94,19.83,16.13,23.08,14.95,12.94,17.07,17.99],
+      MARGIN_SEASONAL:[59.7,61.2,59.8,58.7,57.8,58.6,54.6,60.8,56.9,54.0,57.7,49.6],
+      // YoY revenue arrays (full TW)
+      REV_2024:[2543734,2602361,3514244,4651718,4453322,4807296,3257933,3178871,4673408,2211283,8136842,3800171],
+      REV_2025:[3807284,3766697,4967882,4071004,4184506,4592731,3819471,5652251,3921888,4734259,9976486,4289557],
+      REV_2026:[null,null,null,null,null,null,null,null,null,null,null,null],
+      ROAS_2024:[28.15,29.17,23.28,28.60,27.62,34.45,28.96,34.30,30.62,20.06,30.78,24.99],
+      ROAS_2025:[26.22,21.59,25.73,34.45,30.56,31.84,31.25,38.03,22.43,20.34,23.83,16.80],
+      ROAS_2026:[null,null,null,null,null,null,null,null,null,null,null,null],
+      // Google Trends 5-yr monthly avgs
+      GT_CAT_1:[29.3,30.0,33.3,39.8,28.3,29.7,26.0,26.3,22.5,22.3,39.2,31.2],
+      GT_CAT_2:[40.2,42.5,45.3,40.4,26.1,28.0,29.6,26.3,29.6,21.7,37.7,37.6],
+      GT_CAT_1_LABEL:'"popflex" brand search (5-yr avg)',
+      GT_CAT_2_LABEL:'"pilates clothes" (5-yr avg)',
+      // Day-of-week: TW blended median, 1,096 days
+      DOW:[
+        {d:'MON',rev:79376,roas:22.90},
+        {d:'TUE',rev:95216,roas:27.35},
+        {d:'WED',rev:87111,roas:23.96},
+        {d:'THU',rev:106627,roas:28.04},
+        {d:'FRI',rev:95286,roas:25.41},
+        {d:'SAT',rev:106827,roas:23.88},
+        {d:'SUN',rev:92949,roas:22.94},
+      ],
+      BUDGET_ACTIONS:['Hold','Hold','Scale','Hold','Hold','Scale','Reduce','Hold','Hold','Build for Q4','Max Scale','Hold'],
+      EXEC_SUMMARY:'POPFLEX is the <strong>healthiest brand in the portfolio</strong>. 3-year TW totals: <strong>$139M revenue, $82.4M profit, 59.3% net margin, 27.37&times; blended ROAS</strong>. The earlier "Google Ads declining" narrative was <strong>misleading</strong> &mdash; Google represents only ~11% of total revenue. The full business is <strong>GROWING</strong> (2024 +53%, 2025 +16% YoY). Seasonality is <strong>flat most of the year with one massive November spike</strong>: November = 2.06&times; an average month (Black Friday / Cyber Monday concentration), $8.1M in 2024 and $9.98M in 2025. Outside November, most months sit at 0.7&ndash;1.1&times; with mild lifts in Mar/Jun. MER (ad spend / revenue) is only <strong>4.3%</strong> &mdash; elite-tier for DTC. Brand defense generates $483k revenue at 25&times; ROAS from just $19k spend. The <strong>Video channel is wildly underspent</strong> at $13.6k for $515k revenue (37.72&times; ROAS).',
+      FINDINGS:[
+        {cls:'fg',title:'Healthiest Brand In Portfolio',text:'<strong>3yr: $139M revenue, $82.4M profit, 59.3% net margin, MER 4.3%.</strong> Account is GROWING: 2023 $32M &rarr; 2024 $50M (+53%) &rarr; 2025 $57M (+16%). 27.37&times; blended ROAS is portfolio-leading. POPFLEX is a brand-led business with ads as a thin layer on top of organic + community demand.'},
+        {cls:'fa',title:'November Is A Massive 2&times; Spike (Corrected)',text:'<strong>November = 2.06&times; an average month</strong> &mdash; $8.14M in 2024, $9.98M in 2025, the biggest month every year by far (BFCM concentration). An earlier version of this analysis wrongly showed March as the peak: the detrend method had excluded Nov-Dec 2025 (the biggest quarter) from the edge of the data. Corrected via within-year normalization. Outside November the brand is genuinely flat (0.7&ndash;1.1&times;) thanks to constant Cassey product drops + Blogilates community demand. Plan budget + inventory heavily around November.'},
+        {cls:'fr',title:'Google Ads &ne; Brand Health',text:'Google Ads = <strong>only ~11% of total revenue</strong>. Earlier Google-only analysis showed -45% YoY 2026; that\'s channel mix shift, NOT brand decline. Total brand is up double-digits. <strong>Don\'t read POPFLEX health from Google views alone</strong> &mdash; the brand is increasingly community/email/organic driven.'},
+        {cls:'fg',title:'Hero Products Drive 75% of Search Revenue',text:'<strong>Pirouette Skort</strong> alone = $101k revenue at 20.7&times; ROAS from named search. <strong>Taylor Swift halo</strong> adds $41k at 27.5&times; (purple Pirouette Skort moment). <strong>Cloud Hoodie</strong> $28k. <strong>Blogilates brand search</strong> $326k at 23.9&times;. The brand has earned-media + community-driven search demand that paid ads simply harvest.'},
+        {cls:'fa',title:'Counter-Cyclical Margin: Aug POAS 23&times;',text:'Aug delivers <strong>POAS 23.08&times; at 60.8% margin</strong> &mdash; the year\'s most profitable month. Low ad spend ($93k 3yr avg) + healthy demand = peak profit per dollar. Jan, Jun, Apr also POAS &gt;17&times;. Worst: <strong>Oct POAS 12.94&times; (BFCM prep) and Dec margin 48.6%</strong> (holiday discount compression).'},
+        {cls:'fr',title:'Video Channel Wildly Underspent',text:'<strong>Video: $13.6k spend &rarr; $515k revenue at 37.72&times; ROAS</strong>. That\'s 4&times; the next-best channel. PMax at 13.28&times; gets $788k spend. Shopping at 3.97&times; gets $62k. Either Video budget should triple, or Video is a quirky attribution category in TW worth investigating with Jomar.'},
+      ],
+      MONTH_META:[
+        {s:'&#10052;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.71.</strong> POAS 15.45&times;, 58.9% margin. Post-holiday slow. Steady spend.'},
+        {s:'&#128150;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.72.</strong> POAS 12.67&times;, 58.7% margin. Below-average month. Steady.'},
+        {s:'&#127801;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 0.96.</strong> $5.0M rev (2025). POAS 15.11&times;. Trends "pilates clothes" peaks here. Mild spring lift &mdash; scale modestly.'},
+        {s:'&#127800;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 1.01.</strong> POAS 19.76&times; (top 3 of year). Trends "popflex" peaks here (39.8). At-average demand, efficient.'},
+        {s:'&#9728;',a:'Hold',ac:'aho',conf:'Medium',note:'<strong>Coef 0.99.</strong> POAS 17.72&times;. Discount rate spiked to 24% in 2025 &mdash; watch margin compression.'},
+        {s:'&#127956;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.08 &mdash; mild summer lift.</strong> POAS 19.83&times;. Strong efficiency despite discounts running 17&ndash;25%. Father\'s Day + summer.'},
+        {s:'&#127754;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.81 (off-peak low).</strong> BUT &mdash; <strong>July 4 2025 was a $1M day at 71&times; ROAS.</strong> Plan a strong Independence Day promo. Otherwise low demand.'},
+        {s:'&#127881;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.99 BUT BEST POAS 23.13&times;, 60.8% margin.</strong> Lowest discount month (5.5%). High-quality buyers. Protect margin, don\'t flood with promo.'},
+        {s:'&#127794;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.99.</strong> POAS 12.13&times;. At-average demand. Begin prepping Q4 creative.'},
+        {s:'&#127875;',a:'Build for Q4',ac:'asc',conf:'High',note:'<strong>Coef 0.77.</strong> POAS 11.28&times; (worst of year &mdash; BFCM acquisition phase + 2024 Oct anomaly). Discount 25% in 2025. Ramp budget for November.'},
+        {s:'&#127873;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>TRUE PEAK &mdash; coef 2.06 (2&times; an average month).</strong> 2025 Nov $9.98M (+22% YoY), 2024 Nov $8.14M. BFCM concentration. POAS 14.10&times;. <strong>This single month dwarfs all others &mdash; plan inventory, budget, creative around it.</strong>'},
+        {s:'&#127876;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.92.</strong> POAS 8.17&times; (year low), margin 48.6% (heavy holiday discount 15%). Post-BFCM normalization. Maintain.'},
+      ],
+      INSIGHTS:{
+        opp:[
+          '<strong>Triple Video budget immediately.</strong> Video at 37.72&times; ROAS on only $13.6k spend (vs PMax\'s 13.28&times; on $788k) is the biggest mispricing in the account. Either scale it 5&times; or audit what Video actually contains in TW &mdash; both outcomes are revenue-positive.',
+          '<strong>Build a dedicated Pirouette Skort / Taylor Swift halo campaign.</strong> The Pirouette Skort generates $101k in named search at 20&times; ROAS. The Taylor Swift purple-skort moment added $41k at 27&times;. Combined that\'s $140k+ from one product line driven by celebrity earned media.',
+          '<strong>Plan July 4 as a tentpole event.</strong> July 4 2025 was a $1M revenue day at 71&times; ROAS &mdash; mid-summer peak in a coef-0.81 month. This is a hidden mega-day. Build promo + creative around it.',
+          '<strong>Move Shopping spend to PMax.</strong> Shopping campaigns at 3.97&times; ROAS vs PMax\'s 13.28&times; for the same products. ~$62k in Shopping spend would 3&times; in revenue if shifted.',
+        ],
+        risk:[
+          '<strong>Don\'t read brand health from Google Ads alone.</strong> Google = 11% of revenue. Channel mix is shifting as brand grows organically. Reporting POPFLEX as "declining" off Google-only views is incorrect &mdash; full TW shows GROWTH.',
+          '<strong>December margin compression is structural.</strong> 48.6% margin (vs 60% norm), POAS 8.17&times; (year low), 15% discount rate. This is the planned holiday acquisition trade-off. Accept it but don\'t expand it.',
+          '<strong>Discount discipline weakens in spring/summer.</strong> 24% discount rate in May/Jun/Jul/Oct (2025). The high-POAS months (Mar, Apr, Aug, Jan) deserve margin protection &mdash; cap promo depth there.',
+          '<strong>Negative keyword leakage.</strong> "popflexactive", "blogilates", "pop pilates clothes" still serving despite being excluded. ~$1,721 leakage. Quick audit fix.',
+        ],
+        tactic:[
+          '<strong>DOW is FLAT &mdash; no bid mod needed.</strong> Median revenue ranges from Mon $79k to Thu $107k (within 35%). With MER only 4.3%, DOW bid mods won\'t move the needle. Skip the exercise.',
+          '<strong>TW vs Google ROAS gap averages +75%.</strong> Hits +128% in Apr, +119% in Aug. Never trust Google channel ROAS as the source of truth &mdash; use TW for all decisions.',
+          '<strong>Median &gt; Mean for POPFLEX seasonality.</strong> Mean-based Nov coef = 1.88, but median = 1.10. The Black Friday week mega-days are 3&ndash;4 unique events; demand is NOT elevated all of November. Plan budget by median.',
+          '<strong>Validate the Video channel with Jomar.</strong> 37.72&times; ROAS at $13k spend is either a massive opportunity or a TW attribution quirk. Find out which before scaling.',
+        ],
+      },
+    },
+  },
+
+  // -------------------- OUT OF PRINT --------------------
+  'out-of-print': {
+    name: 'Out of Print',
+    em: 'Literary Apparel',
+    sub: 'Book-Themed Apparel &middot; 3yr TW Blended ($9.4M rev, 47% margin) &middot; Account growing 34% YoY &middot; v2 detrended',
+    badge: 'WRK MARKETING &middot; SEASONALITY INTELLIGENCE',
+    accent: '#9f1239', accent2: '#fda4af', accent3: '#4c0519',
+    ready: true,
+    meta: ['1,096 days TW (Jan 23&ndash;Dec 25)','3 complete calendar years','Within-year normalized','3yr ROAS 5.81&times;','Net margin 46.8%','v2 corrected'],
+    kpis: [
+      {label:'True Peak', val:'Nov', color:'#10b981', sub:'2.04 coef &middot; Dec 1.68 &middot; Mar 1.25'},
+      {label:'True Trough', val:'Jan-Jun', color:'#ef4444', sub:'~0.67 &middot; off-peak base'},
+      {label:'Best Margin Month', val:'Dec', color:'var(--accent)', sub:'52% margin &middot; POAS 3.62&times;'},
+      {label:'Account Status', val:'Growing', color:'#10b981', sub:'2025 +34.4% YoY &middot; record Q4'},
+    ],
+    data: {
+      // SEASONALITY v2 CORRECTED: within-year normalized (2024+2025). Earlier median-detrend
+      // edge-trimmed Nov-Dec 2025 (incl. the $760k Nov), wrongly showing Dec as the lone peak.
+      // November is the true peak (2.04x avg month); Dec strong #2 (1.68); March a real spike (1.25, Read Across America).
+      COEFF:[0.669,0.898,1.251,0.748,0.792,0.669,0.819,0.733,0.859,0.853,2.035,1.675],
+      COEFF_V1_BAD:[0.868,1.088,0.945,0.817,0.982,0.806,0.721,0.785,1.030,0.867,1.324,1.767],
+      // 2025 full-year TW blended (latest complete year)
+      REV:[199739,217541,338354,205775,261927,237733,266112,249606,264667,278417,760116,522444],
+      SPEND:[39868,46591,62136,37935,57800,49932,52298,46304,46102,44720,104099,75091],
+      ROAS:[5.01,4.67,5.45,5.42,4.53,4.76,5.09,5.39,5.74,6.23,7.30,6.96],
+      CH_ROAS:[2.61,2.56,3.22,2.83,3.05,3.00,3.15,3.03,2.76,2.72,3.60,3.13],
+      POAS:[2.27,2.09,2.37,2.64,2.16,2.31,2.46,2.75,2.95,3.02,3.62,3.62],
+      MARGIN:[45.3,44.7,43.5,48.6,47.6,48.5,48.3,50.9,51.3,48.6,49.5,52.0],
+      ORDERS:[4356,4376,6683,3924,4943,4249,4409,4249,4426,5005,13583,10323],
+      NEW_ORDERS:[3056,2796,3991,2462,3706,2750,2733,2584,2867,2822,8162,7116],
+      AOV:[46,50,51,52,53,56,60,59,60,56,56,51],
+      CVR:[1.50,1.48,1.76,1.32,1.44,1.37,1.10,1.35,0.95,1.37,2.07,2.00],
+      NEW_IDX:[0.81,0.74,1.06,0.66,0.99,0.73,0.73,0.69,0.76,0.75,2.17,1.90],
+      NCPA:[13,17,16,15,16,18,19,18,16,16,13,11],
+      NEW_PCT:[70.2,63.9,59.7,62.7,75.0,64.7,62.0,60.8,64.8,56.4,60.1,68.9],
+      DISC_PCT:[17.3,17.6,42.5,19.6,7.5,10.8,12.4,8.6,10.2,14.4,30.3,14.2],
+      GAP:[92,82,69,92,49,59,62,78,108,129,103,122],
+      // 3-yr seasonal (counter-cyclical insight)
+      POAS_SEASONAL:[2.46,3.39,3.79,3.26,3.45,2.85,2.72,3.03,2.34,2.66,3.12,3.36],
+      MARGIN_SEASONAL:[40.5,25.6,44.1,48.1,47.1,47.2,47.1,48.1,44.6,45.5,46.7,48.1],
+      // YoY revenue arrays
+      REV_2024:[166704,261643,338078,199714,178521,138444,188088,159810,207929,194839,393996,400675],
+      REV_2025:[199739,217541,338354,205775,261927,237733,266112,249606,264667,278417,760116,522444],
+      REV_2026:[null,null,null,null,null,null,null,null,null,null,null,null],
+      ROAS_2024:[5.39,4.53,6.10,5.02,4.65,5.67,5.69,6.58,4.77,5.16,5.48,5.84],
+      ROAS_2025:[5.01,4.67,5.45,5.42,4.53,4.76,5.09,5.39,5.74,6.23,7.30,6.96],
+      ROAS_2026:[null,null,null,null,null,null,null,null,null,null,null,null],
+      // Google Trends 5-yr monthly avgs
+      GT_CAT_1:[6.1,19.4,10.3,8.6,11.3,2.4,3.6,0.0,2.2,6.2,26.6,5.1],
+      GT_CAT_2:[14.6,25.8,17.8,22.4,18.3,14.9,18.3,17.0,14.8,15.4,20.2,19.7],
+      GT_CAT_1_LABEL:'"out of print clothing" brand (5-yr avg)',
+      GT_CAT_2_LABEL:'"book t shirt" category (5-yr avg)',
+      // Day-of-week: TW blended median, 1,096 days
+      DOW:[
+        {d:'MON',rev:5877,roas:5.03},
+        {d:'TUE',rev:6317,roas:5.44},
+        {d:'WED',rev:6421,roas:5.70},
+        {d:'THU',rev:6587,roas:5.82},
+        {d:'FRI',rev:6846,roas:5.63},
+        {d:'SAT',rev:6211,roas:5.17},
+        {d:'SUN',rev:6298,roas:4.79},
+      ],
+      BUDGET_ACTIONS:['Reduce','Hold','Scale','Hold','Hold','Reduce','Hold','Hold','Hold','Build for Q4','Max Scale','Max Scale'],
+      EXEC_SUMMARY:'Out of Print is the <strong>portfolio\'s healthiest mid-size brand</strong>. 3yr TW: $9.39M revenue, $4.39M profit, <strong>46.8% net margin, 5.81&times; blended ROAS</strong>. Account is <strong>GROWING</strong>: 2025 hit $3.80M (+34.4% YoY) with improving margin. True seasonality is <strong>strongly Q4-dominant: November is the peak (2.04&times; an average month), December the #2 (1.68&times;)</strong> &mdash; literary apparel is a holiday gift category. A secondary spike hits <strong>March (1.25, Read Across America / Dr. Seuss week)</strong>. Off-peak months (Jan, Apr-Jun) sit at ~0.67-0.80. <strong>49% of TOTAL revenue comes from brand search</strong> ("out of print" variations at 17.11&times; ROAS) &mdash; this is a brand-search-dependent business. 61% new-customer mix (healthy LTV, unlike Iron Neck\'s 80%+). <strong>NCPA $12-17</strong> &mdash; elite acquisition cost in the portfolio. Google Ads = only ~21% of total revenue.',
+      FINDINGS:[
+        {cls:'fg',title:'Healthiest Mid-Size Brand In Portfolio',text:'3yr totals: <strong>$9.39M revenue, $4.39M profit, 46.8% net margin, 5.81&times; ROAS, 2.72&times; POAS</strong>. Account is growing: 2023 $2.76M &rarr; 2024 $2.83M (+2.6%) &rarr; 2025 $3.80M (<strong>+34.4%</strong>). Margin improved 3.3pp YoY in 2025. Q4 2025 was the all-time biggest quarter ($1.56M).'},
+        {cls:'fa',title:'November Is The Peak, December #2 (Corrected)',text:'<strong>Nov 2.04&times; an average month</strong> ($760k in 2025, the biggest month every year), <strong>Dec 1.68&times;</strong> ($522k, 52% margin &mdash; year-high). Both are huge holiday-gift months. An earlier version wrongly showed December as the lone peak with November understated &mdash; the detrend had edge-trimmed Nov-Dec 2025. Corrected via within-year normalization. Also a real <strong>March spike (1.25)</strong> tied to Read Across America / Dr. Seuss week.'},
+        {cls:'fr',title:'Brand Defense Is 49% Of Total Revenue',text:'Top-50 search terms: <strong>96.8% is brand</strong> ("out of print" variations). Brand search alone drives 49% of TOTAL account revenue at <strong>17.11&times; ROAS</strong>. Misspelling "outofprint" delivers 34.2&times; ROAS at 49.6% CTR. <strong>Real account growth must come from non-brand demand creation</strong> (Meta, PR, influencer, organic) &mdash; not paid Google scaling.'},
+        {cls:'fv',title:'May 4 2023 Was A One-Off, Not An Annual Pattern',text:'<strong>VERIFIED:</strong> May 4, 2023 hit $46,489 at 45.4&times; ROAS &mdash; but May 4, 2024 ($7,141 at 4.0&times;) and May 4, 2025 ($9,861 at 3.9&times;) were <strong>normal days</strong>. The 2023 spike was a one-time viral/promotional event (likely a Star Wars licensing drop), NOT proven annual seasonality. Worth investigating what specifically drove that day &mdash; could be replicable with a Star Wars themed launch &mdash; but DO NOT budget for it as a recurring tentpole.'},
+        {cls:'fg',title:'Elite NCPA: $12&ndash;17 New Customer Acquisition',text:'New customer CPA ranges <strong>$12-17 per month</strong> (lowest in portfolio). AOV $50 = first-order ROAS of 3-4&times; just on new customers. Combined with 61% new mix (healthy LTV pattern), unit economics are exceptional for low-AOV apparel.'},
+        {cls:'fr',title:'Spring March Promo Cycle Hits Margin',text:'March 2025 discount rate <strong>42.5%</strong>, March 2024 <strong>34.7%</strong>. Likely tied to "Read Across America" / Dr. Seuss literacy events. Despite heavy discounting, March 2025 revenue ($338k) was FLAT vs March 2024 ($338k). <strong>Discount-for-discount\'s-sake</strong> &mdash; same revenue at thinner margin.'},
+      ],
+      MONTH_META:[
+        {s:'&#10052;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.67 (off-peak low).</strong> POAS 2.27&times;, 45% margin. 70% new customers. Post-holiday slow. Reduce vs baseline.'},
+        {s:'&#128150;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.90.</strong> POAS 2.09&times;. Valentine\'s literary lift (Trends "literary shirt" peaks at 13.2). Steady spend.'},
+        {s:'&#127793;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.25 &mdash; March spike (Read Across America / Dr. Seuss week).</strong> 2025 hit $338k. Real secondary peak. BUT 42.5% discount rate &mdash; cap depth or revenue is flat at half-margin.'},
+        {s:'&#127800;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.75.</strong> Low promo (8%), 48.6% margin. POAS 2.64&times;. Quality buyers, no discount competition. Hold &mdash; below-average demand.'},
+        {s:'&#9728;',a:'Hold',ac:'aho',conf:'Medium',note:'<strong>Coef 0.79.</strong> POAS 2.16&times;, 47.6% margin. Lowest discount rate (7.5%). 75% new customers. Steady. <strong>Note: May 4, 2023 was a $46k viral day but did NOT repeat in 2024 or 2025</strong> &mdash; not a planned annual pattern.'},
+        {s:'&#127956;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.67 (tied annual trough).</strong> POAS 2.31&times;, 48.5% margin. Summer low &mdash; literary apparel isn\'t a summer category. Reduce spend, save for Q4.'},
+        {s:'&#127754;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.82.</strong> POAS 2.46&times;, 48.3% margin. AOV $60 (year high). Low promo, full-price buyers. Hold at good margin.'},
+        {s:'&#127881;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.73.</strong> POAS 2.75&times;, 50.9% margin. Below-average demand but strong margin. Begin prepping Q4 creative.'},
+        {s:'&#127794;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.86.</strong> POAS 2.95&times;, <strong>51.3% margin (year-2 high)</strong>. Back-to-school + library demand. Approaching average &mdash; build toward Q4.'},
+        {s:'&#127875;',a:'Build for Q4',ac:'asc',conf:'High',note:'<strong>Coef 0.85.</strong> POAS 3.02&times;. Pre-Q4 ramp. Test BFCM creative, build retargeting lists, prep inventory for the big two months ahead.'},
+        {s:'&#127873;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>TRUE PEAK &mdash; coef 2.04 (2&times; an average month).</strong> 2025 Nov hit $760k (+93% YoY!). BFCM + holiday gifting. 30% discount rate, ROAS 7.30&times;. <strong>Biggest month of the year &mdash; push budget to the wall.</strong>'},
+        {s:'&#127876;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.68 &mdash; #2 month.</strong> Dec 2025 hit $522k at 6.96&times; ROAS and <strong>52% margin (year high)</strong>. Holiday gifting season continues. Push through Dec 22 shipping deadline.'},
+      ],
+      INSIGHTS:{
+        opp:[
+          '<strong>December is the true peak (not November).</strong> Allocate Dec budget heavier than typical ecom Q4 split. 2025 Dec: $522k revenue, 6.96&times; ROAS, 52% margin. Push budget through the entire month, not just BFCM week.',
+          '<strong>Investigate what drove May 4, 2023 ($46k at 45&times;).</strong> The 2023 spike did NOT repeat in 2024 or 2025 (normal days at 4&times; ROAS). Find out what specifically happened &mdash; PR drop, viral creative, licensing release &mdash; and consider TESTING a Star Wars themed promo for May 4, 2026. Don\'t budget it as recurring revenue, but it\'s a real proof-of-concept for licensed-IP tentpoles.',
+          '<strong>September is undervalued.</strong> Coef 1.03 + POAS 2.95&times; + 51.3% margin. Back-to-school + library demand. Scale spend 15-20% above baseline &mdash; great efficiency without Q4 discount pressure.',
+          '<strong>Brand defense is the ROAS goldmine.</strong> "out of print" search terms = 49% of TOTAL revenue at 17&times; ROAS. Search Brand campaign is currently $17k/yr &mdash; could be $25-30k at same ROAS.',
+        ],
+        risk:[
+          '<strong>Brand-search dependency is structural risk.</strong> 49% of revenue tied to one keyword pattern. If brand awareness fades or competitor outbids, revenue collapses. <strong>Invest in non-brand demand creation</strong> (Meta, organic, influencer) to diversify.',
+          '<strong>March promo cycle destroys margin without lift.</strong> 2024 + 2025 both ran 35&ndash;42% discount in March. Revenue was FLAT YoY. <strong>The promo isn\'t buying growth &mdash; it\'s just cutting margin.</strong> Test a no-promo or smaller-promo March 2026.',
+          '<strong>Promo-code searchers losing money.</strong> "discount code" terms: $1,103 spend at 1.29&times; ROAS. "promo code": $792 at 0.92&times;. <strong>$1,900 of pure waste.</strong> They\'ll convert via brand anyway &mdash; add as negative keywords.',
+          '<strong>"Out of print books" leakage: $2,568 at 2.6&times; ROAS.</strong> Literal book seekers click, see t-shirts, bounce. Add "books / novel / rare / first edition" negatives to filter.',
+        ],
+        tactic:[
+          '<strong>DOW is FLAT &mdash; skip bid modifiers.</strong> Mon $5,877 to Fri $6,846 (15% range). MER is already 19% &mdash; DOW optimization won\'t move the needle. Focus energy elsewhere.',
+          '<strong>TW vs Google ROAS gap averages +85%, peaks +129% in Oct.</strong> Channel-reported ROAS understates true performance by ~half. Never use Google ROAS alone for budget decisions &mdash; especially in fall.',
+          '<strong>Build dedicated Monster at End / Richard Scarry PMax.</strong> IP-collection terms: $43 spend &rarr; $1,851 (43&times; ROAS) for Monster, $1,270 &rarr; $7,424 (5.85&times;) for Scarry. Tiny budget, elite returns. License-driven niches.',
+          '<strong>tROAS calibration by season:</strong> Dec &rarr; 5.0&times; (push volume), Nov &rarr; 5.5&times; (BFCM concentration), Sept &rarr; 5.5&times; (efficiency), Apr-Aug margin-play &rarr; 5.0&times;, Jul (trough) &rarr; 4.5&times;.',
+        ],
+      },
+    },
+  },
+
+  // -------------------- EDGE LIFESTYLE --------------------
+  'edge-lifestyle': {
+    name: 'Edge Lifestyle',
+    em: 'Lifestyle',
+    sub: 'Men\'s Premium Athleisure &middot; 3yr TW Blended &middot; Account declining -29% 2yr &middot; v2 detrended &middot; Google OVERCOUNTS',
+    badge: 'WRK MARKETING &middot; SEASONALITY INTELLIGENCE',
+    accent: '#475569', accent2: '#94a3b8', accent3: '#1e293b',
+    ready: true,
+    meta: ['1,096 days TW (May 23&ndash;May 26)','3 years TW data','MEDIAN-based detrended','3yr ROAS 4.30&times;','POAS estimated (25% margin)','9/10 confidence'],
+    kpis: [
+      {label:'True Peak', val:'Nov', color:'#10b981', sub:'1.51 coef &middot; Mar 1.49 (close 2nd)'},
+      {label:'True Trough', val:'Sep', color:'#ef4444', sub:'0.61 coef &middot; Jul 0.68'},
+      {label:'Best ROAS Month', val:'Aug', color:'var(--accent)', sub:'2025 Aug 6.58&times; &middot; Jun 6.48&times;'},
+      {label:'Account Status', val:'Declining', color:'#ef4444', sub:'-29% over 2yr &middot; 2025 $1.47M'},
+    ],
+    data: {
+      // SEASONALITY: median-based detrended (robust to BFCM concentration)
+      COEFF:[0.930,1.071,1.490,1.106,0.977,0.748,0.677,0.726,0.612,1.145,1.510,1.007],
+      // 2025 actual TW blended (most recent complete year)
+      REV:[99289,98563,200873,93091,131048,116130,70717,107834,67990,193533,232532,57142],
+      SPEND:[21655,27886,34419,19992,27607,17910,14558,16399,16392,46167,48136,14481],
+      ROAS:[4.59,3.53,5.84,4.66,4.75,6.48,4.86,6.58,4.15,4.19,4.83,3.95],
+      // Google channel ROAS — Edge unusually has Google OVER-counting (not undercounting)
+      CH_ROAS:[6.68,8.46,13.36,6.52,8.77,8.27,7.17,10.31,8.66,15.40,22.38,4.76],
+      // POAS estimated at 25% net margin (TW export didn't include profit) — use with caution
+      POAS:[1.15,0.88,1.46,1.17,1.19,1.62,1.22,1.65,1.04,1.05,1.21,0.99],
+      MARGIN:[25,25,25,25,25,25,25,25,25,25,25,25],
+      ORDERS:[628,712,1877,654,855,740,545,798,474,1157,1670,424],
+      NEW_ORDERS:[283,365,877,284,437,262,196,313,254,628,755,206],
+      AOV:[158,138,107,142,153,157,130,137,143,167,139,135],
+      CVR:[1.49,1.85,2.53,1.51,1.86,1.90,1.63,2.04,1.76,2.41,2.41,1.51],
+      NEW_IDX:[0.70,0.90,2.17,0.70,1.08,0.65,0.48,0.77,0.63,1.55,1.86,0.51],
+      NCPA:[34,39,18,31,32,24,27,21,35,40,29,34],
+      NEW_PCT:[45.1,51.3,46.7,43.4,51.1,35.4,36.0,39.2,53.6,54.3,45.2,48.6],
+      DISC_PCT:[0,0,0,0,0,0,0,0,0,0,0,0],
+      // GAP: NEGATIVE for Edge (Google over-counts) — unusual vs other brands
+      GAP:[-31,-58,-56,-29,-46,-22,-32,-36,-52,-73,-78,-17],
+      // POAS_SEASONAL / MARGIN_SEASONAL: estimated, not actuals
+      POAS_SEASONAL:[1.15,0.88,1.46,1.17,1.19,1.62,1.22,1.65,1.04,1.05,1.21,0.99],
+      MARGIN_SEASONAL:[25,25,25,25,25,25,25,25,25,25,25,25],
+      // YoY revenue arrays (TW blended)
+      REV_2024:[162910,129721,225366,157485,99376,115902,121481,105782,54615,82744,267974,117646],
+      REV_2025:[99289,98563,200873,93091,131048,116130,70717,107834,67990,193533,232532,57142],
+      REV_2026:[null,null,null,null,null,null,null,null,null,null,null,null],
+      ROAS_2024:[4.65,5.20,3.91,4.47,4.67,4.31,4.78,4.45,3.21,4.94,6.09,4.43],
+      ROAS_2025:[4.59,3.53,5.84,4.66,4.75,6.48,4.86,6.58,4.15,4.19,4.83,3.95],
+      ROAS_2026:[null,null,null,null,null,null,null,null,null,null,null,null],
+      // Google Trends 5-yr monthly avgs
+      GT_CAT_1:[13.4,11.3,12.5,21.5,10.3,5.9,7.3,8.7,9.5,13.2,23.2,24.7],
+      GT_CAT_2:[14.2,19.8,27.8,27.3,17.7,14.1,15.4,15.0,14.2,15.7,28.6,25.9],
+      GT_CAT_1_LABEL:'"tech joggers" (5-yr avg)',
+      GT_CAT_2_LABEL:'"athleisure men" (5-yr avg)',
+      // Day-of-week: TW blended median, 1,096 days
+      DOW:[
+        {d:'MON',rev:3025,roas:3.53},
+        {d:'TUE',rev:2587,roas:3.30},
+        {d:'WED',rev:2625,roas:3.30},
+        {d:'THU',rev:2682,roas:3.69},
+        {d:'FRI',rev:2797,roas:3.48},
+        {d:'SAT',rev:3035,roas:3.45},
+        {d:'SUN',rev:3188,roas:3.03},
+      ],
+      BUDGET_ACTIONS:['Hold','Hold','Max Scale','Hold','Hold','Margin Play','Reduce','Margin Play','Reduce','Build for Q4','Max Scale','Hold'],
+      EXEC_SUMMARY:'Edge Lifestyle is a <strong>men\'s premium athleisure brand in sustained decline</strong>. TW 3yr totals: $4.50M revenue, $1.05M spend, 4.30&times; ROAS. <strong>Account is shrinking</strong>: 2023 $2.07M &rarr; 2024 $1.64M (-21%) &rarr; 2025 $1.47M (-11%) = <strong>-29% over 2 years</strong>. ROAS improving (4.56 &rarr; 4.81&times;) on smaller scale &mdash; brand is squeezing efficiency from a shrinking base. <strong>New customer % declining</strong> (58.9% &rarr; 46.1%) and <strong>AOV rising</strong> ($127 &rarr; $140+), indicating premium repositioning at expense of acquisition volume. True seasonality: <strong>Nov (1.51) and Mar (1.49) are near-equal twin peaks</strong>; Sep (0.61) is the annual trough. <strong>UNIQUE: Google over-counts by 17&ndash;78% per month</strong> (opposite of every other brand) &mdash; PMax claims credit for retargeting that would convert anyway. <strong>"edge lifestyle" exact-match alone drives 41% of total revenue at 54&times; ROAS</strong> &mdash; extreme single-keyword concentration.',
+      FINDINGS:[
+        {cls:'fr',title:'Account In Sustained -29% Decline',text:'TW 3yr: <strong>2023 $2.07M &rarr; 2024 $1.64M (-21%) &rarr; 2025 $1.47M (-11%)</strong>. Spend cut even more (-33%). ROAS improved (4.56&times; &rarr; 4.81&times;) but on smaller scale &mdash; profitability optimization on a shrinking base. Google Ads showed 2025-Q4 as best Q4 ever for paid, but TW reveals total revenue declining: Google is becoming a bigger slice of a smaller pie.'},
+        {cls:'fa',title:'Nov & Mar Are Near-Equal Twin Peaks',text:'Median coef <strong>Nov 1.51 vs Mar 1.49</strong>. Unusual for ecom &mdash; most have a dominant Q4 with Q1/spring far behind. Edge\'s March is structurally as strong as November. <strong>2025 Mar 22-28 week alone hit $18,421</strong> at 11-46&times; ROAS &mdash; spring promo period works.'},
+        {cls:'fr',title:'UNIQUE: Google OVER-Counts By 17-78%',text:'Every other brand in this dashboard has Google UNDERCOUNTING (TW higher than Google ROAS). <strong>Edge is the opposite</strong>: TW ROAS 4.83&times; in Nov vs Google reports 22.38&times; (+78% over-count). Oct +73%, Mar +56%. Likely cause: PMax claims credit for branded retargeting clicks that would have converted via direct anyway. <strong>Don\'t use Google reports for budget decisions</strong> &mdash; the true ROAS is half of what Google shows.'},
+        {cls:'fr',title:'New Customer % Collapsing',text:'2023: 58.9% new &rarr; 2024: 52.0% &rarr; 2025: 46.1%. Acquisition flow is weakening. Existing customers are doing relatively more of the work. <strong>If new-customer flow doesn\'t recover, account will continue contracting</strong> as existing base churns naturally.'},
+        {cls:'fa',title:'AOV Rising While Volume Falls',text:'2023 AOV $127 &rarr; 2025 AOV $140 (Oct 2025 hit $167). Edge is pushing premium pricing &mdash; works for margin but accelerates the volume decline. Classic late-stage brand maneuver. <strong>Sustainable only if premium AOV brings premium LTV.</strong>'},
+        {cls:'fv',title:'Extreme Single-Keyword Revenue Concentration',text:'<strong>"edge lifestyle" exact match drives 41% of TOTAL account revenue</strong> ($149k of $360k from one search term at 54.3&times; ROAS). Brand defense = 58.6% of revenue. Account is one keyword away from being a different business. <strong>Building a dedicated Search Brand campaign would likely improve CTR from 14% to 40%+</strong> and reduce CPC vs PMax bidding on the same term.'},
+      ],
+      MONTH_META:[
+        {s:'&#10052;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.93.</strong> POAS 1.15 (est), ROAS 4.59&times;. Mild post-holiday slow. Steady spend.'},
+        {s:'&#128150;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 1.07.</strong> ROAS 3.53&times; (year-low). Valentine\'s gifting weak for men\'s athleisure. Steady, don\'t over-invest.'},
+        {s:'&#127801;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.49 &mdash; spring twin peak.</strong> 2025 Mar hit $201k. ROAS 5.84&times;. 1,877 orders &mdash; biggest order month outside Nov. CVR 2.53% (year high). Push budget hard.'},
+        {s:'&#127800;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 1.11.</strong> Sustained spring demand. AOV $142. Hold pace from March.'},
+        {s:'&#9728;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.98.</strong> ROAS 4.75&times;. Mother\'s Day weak for men\'s athleisure. <strong>Memorial Day 2025 was one-off ($35k at 42&times;) &mdash; do NOT plan as recurring annual.</strong>'},
+        {s:'&#127956;',a:'Margin Play',ac:'asc',conf:'High',note:'<strong>Coef 0.75.</strong> ROAS 6.48&times; (above-avg). Father\'s Day signal. Low new-customer % (35.4%) &mdash; retargeting plays best here.'},
+        {s:'&#127754;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.68.</strong> Summer dip. ROAS 4.86&times;. Reduce spend &mdash; demand isn\'t there. Save for fall ramp.'},
+        {s:'&#127811;',a:'Margin Play',ac:'asc',conf:'High',note:'<strong>Coef 0.73 BUT ROAS 6.58&times; (year-high).</strong> Best efficiency window. Low spend ($16k) + decent demand = elite margin. Don\'t cut.'},
+        {s:'&#127794;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.61 &mdash; annual trough.</strong> 2024 Sep was $55k disaster. 2025 Sep $68k. Reduce 20% vs baseline.'},
+        {s:'&#127875;',a:'Build for Q4',ac:'asc',conf:'High',note:'<strong>Coef 1.15.</strong> Pre-Q4 ramp. 2025 Oct hit $194k at 4.19&times; ROAS &mdash; growth window. Build creative for BFCM.'},
+        {s:'&#127873;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>True peak &mdash; coef 1.51.</strong> 2025 Nov $232k. ROAS 4.83&times;. 1,670 orders. BFCM concentration: 3-4 mega-days. <strong>Watch Google over-counting &mdash; Google reports 22.38&times; but reality is 4.83&times;.</strong>'},
+        {s:'&#127876;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 1.01 (avg).</strong> BUT Dec 2025 collapsed to $57k (vs Dec 2023 $180k = -68% decline). Volume is shrinking faster than seasonality suggests. Hold spend, watch closely.'},
+      ],
+      INSIGHTS:{
+        opp:[
+          '<strong>Build a dedicated Search Brand campaign.</strong> "edge lifestyle" exact match drives 41% of revenue at 54&times; ROAS through PMax. Adding Search Brand would lift CTR from 14% to 40%+, lower CPC, and free PMax for prospecting (which works at 16-22&times; on cargo joggers).',
+          '<strong>March is structurally a twin peak with November.</strong> Plan a March promo every year (validated across 2024, 2025, 2026 March monthly revenue at $201-225k). 2025 Mar 22-28 week proves spring promos generate BFCM-week revenue at 11-46&times; ROAS.',
+          '<strong>Scale "How To Beast" creator partnership.</strong> 3 search terms tied to this YouTube influencer: $88 spend &rarr; $2,044 at 23&times; ROAS, 40-50% CTR. Strongest creator/halo signal in the account. Consider expanding the partnership or testing other fitness creators.',
+          '<strong>Aug is the hidden efficiency window.</strong> 2025 Aug: 6.58&times; ROAS (year high), POAS 1.65 (est), low spend ($16k). Below-avg coef (0.73) means competition is light. Push budget through August at same target ROAS &mdash; should produce $150k+ revenue.',
+        ],
+        risk:[
+          '<strong>Account is in sustained decline.</strong> -29% revenue over 2 years. Without intervention, 2026 will be $1.3M (another -11% YoY). Spend cuts alone aren\'t a strategy &mdash; need new-customer flow recovery (Meta, organic, PR).',
+          '<strong>Google reports are misleading (over-counting +17-78%).</strong> If anyone is making budget decisions based on PMax\'s reported 22&times; ROAS in November, they\'re vastly overestimating real performance. Use TW as truth.',
+          '<strong>New-customer % is collapsing.</strong> 58.9% &rarr; 46.1% over 2 years. Existing customer base will churn naturally; without new flow the account contracts further.',
+          '<strong>Memorial Day 2025 was a one-off, not annual pattern.</strong> If planning 2026 Memorial Day budget based on $35k day, you\'ll be disappointed. 2023 and 2024 Memorial Days were normal $4-7k days.',
+        ],
+        tactic:[
+          '<strong>POAS values shown are 25%-margin ESTIMATES.</strong> TW export didn\'t include profit data. True margin likely 20-30% for men\'s premium athleisure. Treat POAS as directional, not absolute.',
+          '<strong>DOW is essentially flat.</strong> Median $2,587-3,188 across all 7 days (22% range). Skip DOW bid modifiers.',
+          '<strong>tROAS calibration (using TW truth, not Google):</strong> Nov &rarr; 4.0&times; (push volume), Mar &rarr; 5.0&times; (Spring peak), Aug &rarr; 6.0&times; (efficiency), Jul/Sep &rarr; 5.0&times; (defensive in troughs).',
+          '<strong>Hidden mega-days require investigation</strong>: 2025-06-30 ($54k at 61&times;) and 2026-04-30 ($40k at 54&times;) are unexplained spikes. Could be planned campaign launches or one-off virality. Check with Kristine before treating as pattern.',
+        ],
+      },
+    },
+  },
+
+  // -------------------- OMEGAVIA --------------------
+  'omegavia': {
+    name: 'OmegaVia Supplements',
+    em: 'Supplements',
+    sub: 'Omega-3 + InnovixLabs &middot; 3yr TW: $31.2M rev, $26.9M profit, 86% margin &middot; v2 detrended &middot; 9.5/10 confidence',
+    badge: 'WRK MARKETING &middot; SEASONALITY INTELLIGENCE',
+    accent: '#059669', accent2: '#6ee7b7', accent3: '#064e3b',
+    ready: true,
+    meta: ['1,096 days TW (2023-2025)','3 complete calendar years','86% net margin','MER only 5.2%','Subscription/Amazon driven','Google = 2-5% of revenue'],
+    kpis: [
+      {label:'True Peak', val:'Oct-Nov', color:'#10b981', sub:'1.05 coef &middot; very flat curve'},
+      {label:'True Trough', val:'Feb', color:'#ef4444', sub:'0.94 coef &middot; near-flat'},
+      {label:'Best ROAS Year', val:'2025', color:'var(--accent)', sub:'48.4&times; blended (vs 16.3&times; in 2024)'},
+      {label:'Account Status', val:'Healthy &amp; Growing', color:'#10b981', sub:'+74% then +8% YoY &middot; 86% margin'},
+    ],
+    data: {
+      // SEASONALITY v2 CORRECTED: within-year normalized (2024+2025). Genuinely FLAT (0.94-1.06) due
+      // to subscription stability. Earlier detrend mislabeled Dec as trough; Dec is actually ~average.
+      COEFF:[0.983,0.937,1.006,0.982,0.983,0.955,1.022,1.020,1.007,1.051,1.056,0.998],
+      COEFF_V1_BAD:[0.999,1.010,1.000,0.925,0.957,1.027,1.000,1.064,1.069,1.023,1.015,0.912],
+      // 2025 actual TW (most recent complete year)
+      REV:[1004823,944274,1021895,1008901,1015486,981544,1137160,1144489,1097623,1142217,1143472,1090783],
+      SPEND:[46563,42263,24541,11213,13281,13449,16799,17596,18078,18471,20212,20457],
+      ROAS:[21.58,22.34,41.64,89.98,76.46,72.98,67.69,65.04,60.72,61.84,56.57,53.32],
+      CH_ROAS:[0.32,0.39,0.41,1.55,1.05,0.89,1.38,1.34,0.99,0.82,1.28,0.77],
+      POAS:[18.09,18.80,35.86,79.15,69.67,66.86,62.42,59.79,56.01,57.06,51.92,49.19],
+      MARGIN:[83.8,84.1,86.1,88.0,91.1,91.6,92.2,91.9,92.2,92.3,91.8,92.3],
+      ORDERS:[35578,33652,35694,34520,34336,33373,37897,38091,36121,37342,37499,35937],
+      NEW_ORDERS:[8474,8258,17392,21982,16871,11609,12329,10659,7087,6439,7225,7447],
+      AOV:[28,28,29,29,30,29,30,30,30,31,30,30],
+      CVR:[1.4,1.5,1.3,1.9,1.6,1.2,3.5,2.6,2.7,3.6,4.2,3.1],
+      NEW_IDX:[0.76,0.74,1.56,1.97,1.51,1.04,1.11,0.96,0.64,0.58,0.65,0.67],
+      NCPA:[6,5,1,1,1,1,1,2,3,3,3,3],
+      NEW_PCT:[23.8,24.5,48.7,63.7,49.1,34.8,32.5,28.0,19.6,17.2,19.3,20.7],
+      DISC_PCT:[11.3,11.3,11.3,10.0,7.4,6.8,6.1,6.4,5.7,5.9,6.2,5.5],
+      // Attribution gap: TW vs Google ROAS — MASSIVE under-counting (4300-10000%)
+      GAP:[6644,5628,10056,5705,7182,8100,4805,4754,6033,7441,4320,6824],
+      // 3-yr seasonal POAS & margin
+      POAS_SEASONAL:[15.25,15.58,34.35,33.26,28.90,31.58,32.01,31.35,28.92,28.61,33.63,28.26],
+      MARGIN_SEASONAL:[88.8,88.3,86.2,54.2,58.3,83.4,87.2,87.3,87.0,84.9,87.3,87.8],
+      REV_2024:[997195,962430,1027465,992017,987775,963796,952138,940715,958074,1004312,1012586,947441],
+      REV_2025:[1004823,944274,1021895,1008901,1015486,981544,1137160,1144489,1097623,1142217,1143472,1090783],
+      REV_2026:[null,null,null,null,null,null,null,null,null,null,null,null],
+      ROAS_2024:[12.63,13.58,9.30,12.46,15.82,23.10,25.00,25.49,18.72,21.06,18.94,19.52],
+      ROAS_2025:[21.58,22.34,41.64,89.98,76.46,72.98,67.69,65.04,60.72,61.84,56.57,53.32],
+      ROAS_2026:[null,null,null,null,null,null,null,null,null,null,null,null],
+      GT_CAT_1:[20.4,21.0,25.0,30.5,20.6,17.1,17.5,17.3,16.6,16.2,17.5,17.0],
+      GT_CAT_2:[12.9,12.6,18.7,23.2,12.3,7.9,10.6,11.0,11.0,10.0,11.2,10.3],
+      GT_CAT_1_LABEL:'"omega 3 fish oil" (5-yr avg)',
+      GT_CAT_2_LABEL:'"kids omega 3" (5-yr avg)',
+      DOW:[
+        {d:'MON',rev:33738,roas:35.0},
+        {d:'TUE',rev:32293,roas:35.0},
+        {d:'WED',rev:31933,roas:35.0},
+        {d:'THU',rev:30639,roas:35.0},
+        {d:'FRI',rev:27037,roas:35.0},
+        {d:'SAT',rev:28670,roas:35.0},
+        {d:'SUN',rev:35422,roas:35.0},
+      ],
+      BUDGET_ACTIONS:['Hold','Hold','Acquisition','Acquisition','Acquisition','Hold','Hold','Hold','Hold','Hold','Hold','Hold'],
+      EXEC_SUMMARY:'OmegaVia is a <strong>subscription/Amazon-driven supplements powerhouse</strong> &mdash; <strong>3yr TW: $31.2M revenue, $26.9M profit, 86% net margin, MER only 5.2%</strong>. Google Ads view shows the account "losing money" (0.62&times; ROAS), but TW reveals the truth: Google represents only 2-5% of total revenue &mdash; the brand operates as a mature returning-customer business with Amazon, email, and organic doing the heavy lifting. <strong>April 2025 was a strategic masterstroke</strong>: ad spend was cut 78% ($60k &rarr; $17k/mo) while revenue STAYED FLAT and margin <em>improved</em> 83.3% &rarr; 89.9%. Net profit went UP $137k/month after cutting $42k in spend. <strong>Seasonality is exceptionally FLAT</strong> (median 0.91-1.07) due to subscription stability. The most interesting pattern: <strong>massive Mar-Apr 2025 new-customer acquisition push</strong> (17k &rarr; 22k new orders/mo, subscription % spiked to 24%). Brand portfolio: <strong>OmegaVia</strong> (Omega-3 fish oil, Kids Chewies/Gummies, EPA, DHA) + <strong>InnovixLabs</strong> sister brand (Vitamin K2, D3, Probiotics, Magnesium, Choline, Prebiotic Fiber).',
+      FINDINGS:[
+        {cls:'fg',title:'$27M Profit Engine, 86% Net Margin',text:'3yr TW: $31.2M revenue, $26.9M net profit, 19.15&times; blended ROAS, <strong>MER only 5.2%</strong>. This is the highest-margin brand in the portfolio. Account grew 73% in 2024 then 8% in 2025 while becoming dramatically more efficient.'},
+        {cls:'fa',title:'April 2025 Spend Cut = Pure Profit Win',text:'WRK took over and cut Google ad spend by 78% (from $60k/mo to $17k/mo). Revenue stayed FLAT. Margin went 83.3% &rarr; 89.9% (+6.6pp). <strong>Net profit per month went UP $137k AFTER cutting spend by $42k.</strong> Classic over-spending discovery: the previous agency was funding ad clicks that would have converted via direct/Amazon anyway.'},
+        {cls:'fr',title:'Google Reports Are Misleading For This Account',text:'Google channel-reported ROAS averages 0.32-1.55&times; (looks unprofitable). TW blended shows 21-90&times; (massively profitable). <strong>Attribution gap is 4,300-10,000%</strong> &mdash; the most extreme in the portfolio. Google sees only its own direct touch, missing 95%+ of revenue from subscription auto-renews, Amazon, and direct returning customers. <strong>Don\'t use Google ROAS to make budget decisions on this account.</strong>'},
+        {cls:'fa',title:'Spring 2025 New-Customer Push (Mar-May)',text:'New customer orders: Feb 8,258 &rarr; <strong>Mar 17,392 (+110%) &rarr; Apr 21,982 (+27%)</strong> &rarr; May 16,871 &rarr; Jun 11,609 (back to normal). Subscription % spiked from 2% to <strong>24% in April</strong> &mdash; massive subscriber acquisition wave. Likely combination of Amazon Big Spring Sale + email + PR. <strong>This is the playbook to repeat for spring 2026.</strong>'},
+        {cls:'fg',title:'Subscription Stability = Flat Seasonality',text:'Median seasonality range: <strong>0.91 (Dec) to 1.07 (Aug-Sep)</strong> &mdash; the narrowest in the entire portfolio. Supplements customers are habitual buyers (Omega-3 daily intake). Subscription auto-renew flattens demand vs typical ecom. <strong>Don\'t budget for Q4 spikes &mdash; they don\'t exist here.</strong>'},
+        {cls:'fv',title:'Brand Portfolio: OmegaVia + InnovixLabs',text:'Two brand families: <strong>OmegaVia</strong> (Omega-3 fish oil, Kids Chewies, EPA 500, DHA 600) + <strong>InnovixLabs</strong> (Vitamin K2, D3, Mood Probiotic, Multi-Strain Probiotics, Magnesium, Choline, Prebiotic Fiber). Same parent company. Top product: <strong>OmegaVia Ultra Concentrated Omega-3 1135mg</strong> ($3.9k ad cost &rarr; $10.2k rev at 2.6&times; Google ROAS).'},
+      ],
+      MONTH_META:[
+        {s:'&#10052;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 1.00.</strong> ROAS 21.58&times;, margin 83.8%. POAS 18.09&times;. Stable month. 24% new customers. Discount 11.3% (highest of year). Maintain spend.'},
+        {s:'&#128150;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 1.01.</strong> ROAS 22.34&times;. Subscription month + Valentine\'s mild lift. 24% new. Steady.'},
+        {s:'&#127801;',a:'Acquisition',ac:'asc',conf:'High',note:'<strong>Coef 1.00 BUT MAJOR new-cust spike.</strong> 2025 Mar: 17,392 new orders (+110% MoM). Subscription % jumps to 15%. <strong>This is the spring acquisition window.</strong>'},
+        {s:'&#127800;',a:'Acquisition',ac:'asc',conf:'High',note:'<strong>Coef 0.93 (seasonal dip) BUT BEST ROAS 90&times;.</strong> 2025 Apr: 21,982 new orders (peak), <strong>subscription % 24.6%</strong>, margin 88%. Trends "omega 3" peaks here (30.5). <strong>The acquisition magic month.</strong>'},
+        {s:'&#9728;',a:'Acquisition',ac:'asc',conf:'High',note:'<strong>Coef 0.96.</strong> ROAS 76&times;. Sustained new-customer push (16,871 new). Margin 91.1%. 7.4% discount. Tail end of spring acquisition.'},
+        {s:'&#127956;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 1.03.</strong> ROAS 73&times;. Returning to normal acquisition pace (11,609 new). 91.6% margin.'},
+        {s:'&#127754;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 1.00.</strong> ROAS 68&times;. 2025 Jul revenue $1.14M (highest of year). 92.2% margin. Maintain.'},
+        {s:'&#127811;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 1.06 &mdash; tied annual peak.</strong> Revenue $1.14M. ROAS 65&times;. 92% margin. Best efficiency month.'},
+        {s:'&#127794;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 1.07 &mdash; annual peak.</strong> Revenue $1.10M. ROAS 61&times;. 92.2% margin. Back-to-school subscription renewal wave.'},
+        {s:'&#127875;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 1.02.</strong> Revenue $1.14M. ROAS 62&times;. 92.3% margin. <strong>Top revenue day in 3 years happened Oct 7 2025 ($82k at 164&times; ROAS).</strong>'},
+        {s:'&#127873;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 1.02.</strong> Revenue $1.14M. ROAS 57&times;. Margin 91.8%. <strong>NOT a typical Q4 peak</strong> &mdash; supplements don\'t gift-spike. Maintain steady.'},
+        {s:'&#127876;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.91 (annual trough).</strong> Revenue $1.09M (still strong). ROAS 53&times;. 92.3% margin. Mild dip but not material.'},
+      ],
+      INSIGHTS:{
+        opp:[
+          '<strong>Repeat the Mar-Apr-May 2025 acquisition playbook in 2026.</strong> Brought in 50k+ new customers, spiked subscription % to 24%, all at $1-2 NCPA. Whatever combination of Amazon Big Spring Sale + email + organic drove this is repeatable.',
+          '<strong>Hold the lean spend strategy.</strong> Don\'t go back to 2024\'s $60-110k/mo Google spend. The Apr 2025 cut to $11-20k/mo produced more profit. Resist pressure to scale Google &mdash; the channel is incremental at best.',
+          '<strong>Build a Search Brand campaign at low budget.</strong> Brand searches ("omegavia", "omega via", product names) are the only Google traffic worth capturing. Even at low ROAS (1-4&times; Google attribution), it\'s defensive brand protection.',
+          '<strong>InnovixLabs portfolio is underexploited.</strong> Sister brand has product variety (K2, D3, Magnesium, Probiotics) but minimal search demand ("innovixlabs" Trends ~0 except Apr 12.9 spike). PR or content strategy could lift this without much paid investment.',
+        ],
+        risk:[
+          '<strong>Subscription churn is the silent risk.</strong> 80% of revenue is returning customers. If subscription churn rises (e.g., Amazon Subscribe & Save changes, customer fatigue), revenue collapses fast. Track churn rate monthly with Kristine.',
+          '<strong>Amazon dependency.</strong> Most revenue likely flows through Amazon. If Amazon listings get suppressed, account loses 60%+ of revenue overnight. Diversify with Shopify/direct subscription push.',
+          '<strong>The 2025 ROAS increase is partly a math artifact.</strong> Cutting spend 78% while revenue stays flat mathematically increases ROAS. Don\'t mistake this for "Google ads are working better" &mdash; they\'re less effective per dollar, just there\'s fewer dollars.',
+          '<strong>March discount rate 11.3% is high.</strong> Tied to spring acquisition push. If acquisition stops, that promo cost has no ROI. Plan acquisition + promo together, never separately.',
+        ],
+        tactic:[
+          '<strong>DOW: Sunday + Monday peak (subscription auto-renew days).</strong> Sun $35,422, Mon $33,738 (high). Fri $27,037 (low). Pattern is set by subscription billing schedules, not consumer behavior &mdash; not actionable for bid modifiers.',
+          '<strong>Google attribution gap averages +6,500%.</strong> Reading Google reports for this account is actively harmful for budget decisions. Use TW only. Google should be ~5% of total revenue / less than 5% of total ad budget.',
+          '<strong>tROAS targets (using TW truth):</strong> Brand search &rarr; 30&times;, NB prospecting (if any) &rarr; 5&times; (recognizing it loses on Google attribution but supports total funnel). Don\'t scale NB beyond a defensive minimum.',
+          '<strong>Subscription conversion is the KPI to optimize, not order ROAS.</strong> Every new customer should go through a subscription enrollment funnel. The 2.3% subscription order rate is low &mdash; lift it via post-purchase email + Subscribe & Save promotion.',
+        ],
+      },
+    },
+  },
+
+  // -------------------- TIE BOSS --------------------
+  'tie-boss': {
+    name: 'Tie Boss Hardware',
+    em: 'Hardware',
+    sub: 'Made-in-USA Tie-Downs &amp; Outdoor Gear &middot; 4yr TW &middot; 2025 EXPLODED +304% YoY &middot; v2 within-year normalized &middot; 9/10',
+    badge: 'WRK MARKETING &middot; SEASONALITY INTELLIGENCE',
+    accent: '#ea580c', accent2: '#fdba74', accent3: '#9a3412',
+    ready: true,
+    meta: ['1,461 days TW (2022-2025)','4 complete years','3yr ROAS 4.43&times;','41.4% margin','89.6% new customers','MER 22.6%'],
+    kpis: [
+      {label:'True Peak', val:'Nov', color:'#10b981', sub:'1.62 coef &middot; Dec 1.53 &middot; Q4-dominant'},
+      {label:'True Trough', val:'Feb', color:'#ef4444', sub:'0.62 coef &middot; Jan 0.65'},
+      {label:'Best Margin Month', val:'Nov', color:'var(--accent)', sub:'37% margin &middot; POAS 2.84&times;'},
+      {label:'Account Status', val:'Exploding', color:'#10b981', sub:'+304% YoY 2025 &middot; $8.3M'},
+    ],
+    data: {
+      // SEASONALITY v2: within-year normalized (2023-2025) — each month / that year's mean, averaged.
+      // CORRECTED from earlier edge-trimmed detrend which wrongly excluded 2025 Q4 (the biggest quarter)
+      // and falsely showed Sep peak / Dec low. Real pattern is Q4-dominant (Nov peak, Dec #2).
+      COEFF:[0.651,0.621,0.781,0.892,0.882,0.831,0.982,0.982,1.032,1.192,1.623,1.533],
+      COEFF_V1_BAD:[0.828,0.822,1.016,0.972,0.932,0.876,1.044,1.130,1.198,1.165,1.095,0.920],
+      // 2025 actual TW (breakout year)
+      REV:[205176,184000,295030,337019,446121,480382,636341,726562,887212,1170313,1659372,1292166],
+      SPEND:[47078,44696,62377,69017,78371,94429,126947,143536,165347,233972,289079,235010],
+      ROAS:[4.36,4.12,4.73,4.88,5.69,5.09,5.01,5.06,5.37,5.00,5.74,5.50],
+      CH_ROAS:[2.87,2.66,2.97,3.62,3.69,3.11,2.96,3.18,3.35,3.06,3.87,4.04],
+      POAS:[2.01,1.84,2.06,2.01,2.60,2.24,2.16,2.24,2.45,2.22,2.47,2.35],
+      MARGIN:[46.2,44.6,43.4,41.2,45.7,43.9,43.2,44.2,45.6,44.4,43.0,42.7],
+      ORDERS:[3301,2993,4886,5548,6877,7467,9662,10530,12959,17316,23768,19069],
+      NEW_ORDERS:[2939,2637,4353,5032,6226,6699,8597,9497,11820,15723,21549,17407],
+      AOV:[62,61,60,61,65,64,66,69,68,68,70,68],
+      CVR:[4.4,4.9,5.4,4.7,6.0,5.8,5.9,5.7,5.9,6.2,5.9,5.5],
+      NEW_IDX:[0.31,0.28,0.46,0.54,0.66,0.71,0.92,1.01,1.26,1.68,2.30,1.86],
+      NCPA:[16,17,14,14,13,14,15,15,14,15,13,14],
+      NEW_PCT:[89.0,88.1,89.1,90.7,90.5,89.7,89.0,90.2,91.2,90.8,90.7,91.3],
+      DISC_PCT:[3.3,3.8,4.0,6.8,6.4,6.2,6.4,6.6,7.0,6.7,13.2,8.1],
+      GAP:[52,55,59,35,54,64,69,59,60,63,48,36],
+      POAS_SEASONAL:[2.20,2.29,2.44,2.10,2.56,2.37,2.31,2.45,2.49,2.59,2.84,2.65],
+      MARGIN_SEASONAL:[32.4,36.2,34.1,23.1,31.5,32.8,32.7,34.1,34.3,36.1,37.0,36.9],
+      REV_2024:[87705,105305,177169,181069,216729,162750,154776,171396,181368,204076,225055,190070],
+      REV_2025:[205176,184000,295030,337019,446121,480382,636341,726562,887212,1170313,1659372,1292166],
+      REV_2026:[null,null,null,null,null,null,null,null,null,null,null,null],
+      ROAS_2024:[2.41,3.45,3.84,3.08,3.87,3.50,3.04,3.70,3.40,4.37,4.81,4.35],
+      ROAS_2025:[4.36,4.12,4.73,4.88,5.69,5.09,5.01,5.06,5.37,5.00,5.74,5.50],
+      ROAS_2026:[null,null,null,null,null,null,null,null,null,null,null,null],
+      GT_CAT_1:[36.7,42.0,50.0,58.4,60.3,62.6,62.2,55.5,48.7,45.7,43.3,41.3],
+      GT_CAT_2:[11.8,14.2,20.6,30.9,32.1,30.1,29.6,23.5,17.4,14.5,12.6,11.1],
+      GT_CAT_1_LABEL:'"tie down straps" (5-yr avg)',
+      GT_CAT_2_LABEL:'"kayak storage" (5-yr avg)',
+      DOW:[
+        {d:'MON',rev:5255,roas:3.25},
+        {d:'TUE',rev:4834,roas:2.85},
+        {d:'WED',rev:4752,roas:2.96},
+        {d:'THU',rev:4257,roas:2.86},
+        {d:'FRI',rev:4747,roas:3.12},
+        {d:'SAT',rev:4829,roas:2.97},
+        {d:'SUN',rev:5438,roas:3.21},
+      ],
+      BUDGET_ACTIONS:['Reduce','Reduce','Hold','Hold','Hold','Hold','Hold','Hold','Scale','Max Scale','Max Scale','Max Scale'],
+      EXEC_SUMMARY:'Tie Boss is the <strong>portfolio\'s explosive growth story</strong> &mdash; made-in-USA outdoor/utility hardware (rope tie-downs, Jaw Boss logging tool, kayak/Jeep hanger slings, hunting hoists). 3yr TW: $11.28M revenue, $4.67M profit, 41.4% margin, 4.43&times; ROAS. <strong>2025 was a breakout: revenue +304% YoY</strong> ($2.06M &rarr; $8.32M); November 2025 alone hit $1.66M. BUT <strong>89.6% of orders are new customers</strong> &mdash; this is a single-purchase product (you buy a tie-down once) with no LTV runway. Growth is 100% acquisition-driven, and it\'s working spectacularly. Seasonality is <strong>strongly Q4-dominant: Nov (1.62 coef) is the peak, Dec (1.53) is the #2 month, Oct (1.19) strong</strong> &mdash; driven by holiday gift-giving for outdoorsmen + hunting season hoisting. Jan-Feb is the deep winter trough (0.62-0.65). Q4 carries both peak volume AND peak margin (Nov 37%, no deep discounting &mdash; outdoor buyers pay full price). <strong>MER 22.6% &mdash; this is a paid-growth-dependent brand</strong> (unlike OmegaVia\'s organic engine). Key risk: it\'s an acquisition treadmill (same structural profile as Iron Neck) &mdash; when new-customer flow slows, revenue stops.',
+      FINDINGS:[
+        {cls:'fg',title:'Explosive +304% Growth In 2025',text:'TW: 2022 $1.25M &rarr; 2023 $904k (dip) &rarr; 2024 $2.06M (+127%) &rarr; <strong>2025 $8.32M (+304%)</strong>. November 2025 alone = $1.66M (vs $225k Nov 2024). Margin improved 40% &rarr; 44% while scaling. This is the single biggest growth trajectory in the portfolio.'},
+        {cls:'fr',title:'89.6% New Customers = Acquisition Treadmill',text:'Single-purchase product (one tie-down lasts years). <strong>No subscription/LTV runway</strong> &mdash; same structural profile as Iron Neck. Growth requires constant new-customer flow. It\'s working brilliantly now (NCPA ~$14, stable), but the moment acquisition efficiency declines or CAC rises, revenue plateaus. Watch new-customer volume monthly as the leading indicator.'},
+        {cls:'fa',title:'Strongly Q4-Dominant Seasonality',text:'Within-year normalized (2023-2025): <strong>Nov 1.62 (peak), Dec 1.53 (#2), Oct 1.19</strong>. Holiday gift-giving for the outdoorsman/hunter/trucker + hunting-season hoisting. Late summer (Aug-Sep ~1.0) is the secondary base. Jan-Feb is the deep winter trough (0.62-0.65) &mdash; nobody\'s tying down kayaks in February. <strong>Q4 is where the money is made.</strong>'},
+        {cls:'fg',title:'Q4 = High Volume AND High Margin',text:'Unlike most brands that discount for volume, Tie Boss Q4 carries <strong>both peak revenue AND peak margin</strong> (Nov 37% margin, POAS 2.84&times;). Outdoor enthusiasts pay full price &mdash; the product is a gift, not a deal-shopped commodity. Only Nov discount rate elevated (13.2%, BFCM). Push Q4 hard without margin fear.'},
+        {cls:'fa',title:'Healthy Non-Brand Prospecting',text:'Unusual for the portfolio: Tie Boss non-brand prospecting WORKS. PMax "Tie Down Rope" at 4.0&times;, "truck tie downs" 4.87&times;, "rope tie down" 8.18&times;. Category demand (Trends "tie down straps" peaks Jun 62.6) is being captured profitably. The product solves a real utility need with strong search intent.'},
+        {cls:'fv',title:'Product Portfolio Beyond Rope',text:'Flagship 3/8" Tie Boss rope ($176k/yr, 8.9&times;) anchors, but the expansion products drive growth: <strong>Jaw Boss</strong> (logging/chainsaw, $55k 8.8&times;), <strong>Kayak Hanger Sling</strong> ($49k), <strong>Hard Top Hanger</strong> (Jeep tops), <strong>Block &amp; Tackle / Hunter\'s Special</strong> (game hoisting). Each new product opens a new outdoor niche &mdash; the growth engine.'},
+      ],
+      MONTH_META:[
+        {s:'&#10052;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.65.</strong> ROAS 4.36&times;, 46% margin, POAS 2.01&times;. Low winter demand. 89% new. Reduce vs baseline &mdash; demand isn\'t there.'},
+        {s:'&#10052;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.62 (annual trough).</strong> Dead winter &mdash; nobody\'s tying down kayaks in February. ROAS 4.12&times;. Lowest-demand month. Cut spend, save for Q4.'},
+        {s:'&#127793;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.78.</strong> Spring outdoor prep begins. ROAS 4.73&times;, POAS 2.06&times;. Demand awakening but still below average. Hold.'},
+        {s:'&#127800;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.89.</strong> ROAS 4.88&times;. Brand search "tie boss" peaks (Trends 21.8). 23% discount creeps in &mdash; watch margin (lowest at 41%).'},
+        {s:'&#9728;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.88.</strong> ROAS 5.69&times; (year-high efficiency). POAS 2.60&times;. Category demand peaks (Trends "tie down straps" 60). Efficient but moderate volume &mdash; hold at good ROAS.'},
+        {s:'&#127957;',a:'Hold',ac:'aho',conf:'Medium',note:'<strong>Coef 0.83.</strong> Summer mid-season. ROAS 5.09&times;. Category search peaks (Trends 62.6) but Tie Boss revenue below avg &mdash; possible summer capture opportunity.'},
+        {s:'&#127754;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.98.</strong> ROAS 5.01&times;. Approaching average demand. Outdoor activity high.'},
+        {s:'&#127811;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.98.</strong> ROAS 5.06&times;. At-average month. Building toward the fall/Q4 ramp.'},
+        {s:'&#127794;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.03 &mdash; above-average, fall ramp begins.</strong> Hunting season + outdoor projects. 2025 Sep $887k. ROAS 5.37&times;, POAS 2.45&times;. Start scaling into the Q4 peak.'},
+        {s:'&#127875;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.19.</strong> 2025 Oct $1.17M. Hunting season peak + early holiday demand. ROAS 5.00&times;. Push budget hard &mdash; the Q4 surge is underway.'},
+        {s:'&#127873;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>TRUE PEAK &mdash; coef 1.62 + BEST MARGIN (37%, POAS 2.84&times;).</strong> 2025 Nov $1.66M (biggest month ever). BFCM + gift-giving for outdoorsmen + hunting hoists. ROAS 5.74&times;. Volume AND margin peak together &mdash; push to the wall.'},
+        {s:'&#127876;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.53 &mdash; #2 month of the year.</strong> 2025 Dec $1.29M. Holiday gift season for the outdoorsman/hunter/trucker. ROAS 5.50&times;, POAS 2.35&times;. Sustain max scale through mid-Dec shipping deadline.'},
+      ],
+      INSIGHTS:{
+        opp:[
+          '<strong>Capture the summer category-demand gap.</strong> Trends "tie down straps" peaks Jun-Jul (62.6) but Tie Boss revenue is mid-pack those months (coef 0.88-1.04). The category demand exists &mdash; build summer prospecting campaigns for truck/RV/kayak hauling intent.',
+          '<strong>Q4 is the money window &mdash; push without margin fear.</strong> Nov-Dec carry both peak volume and peak margin (37%, no deep discounting). 2025 Q4 = $4.1M. Plan inventory + budget for an even bigger Q4 2026 given the growth trajectory.',
+          '<strong>Keep expanding the product line.</strong> Each new outdoor niche product (Jaw Boss, Kayak Sling, Hard Top Hanger, Hunter\'s Special) opens a fresh acquisition pool. This is the proven growth engine &mdash; new products = new customers.',
+          '<strong>Non-brand prospecting genuinely works here.</strong> 4-8&times; ROAS on category terms. Unlike most portfolio brands, scale NB confidently &mdash; the utility-product search intent converts.',
+        ],
+        risk:[
+          '<strong>Acquisition treadmill is the existential risk.</strong> 89.6% new customers, no repeat-purchase runway. The 304% growth depends entirely on sustained new-customer flow at ~$14 NCPA. If CAC rises or acquisition saturates, growth stops abruptly (Iron Neck\'s exact trajectory). Monitor new-customer volume + NCPA monthly.',
+          '<strong>MER 22.6% = paid-dependent.</strong> Unlike OmegaVia (5% MER, organic), Tie Boss needs paid ads to grow. The business is only as healthy as its ad efficiency. A platform change (iOS, PMax algo shift) could hit hard.',
+          '<strong>2023 was a -27% dip year.</strong> Growth isn\'t guaranteed linear &mdash; the brand contracted in 2023 before the 2024-2025 explosion. Don\'t assume the trajectory is permanent; the category is competitive (ratchet straps, generic tie-downs).',
+          '<strong>Feb + deep winter trough.</strong> Coef 0.62 (Jan 0.65). Don\'t over-spend Jan-Feb &mdash; outdoor demand genuinely isn\'t there. Pull budget forward to the Oct-Dec peak.',
+        ],
+        tactic:[
+          '<strong>DOW: Sunday + Monday peak (weekend project planning).</strong> Sun $5,438, Mon $5,255 vs Thu $4,257. +25% weekend lift. People plan weekend hauling/hunting/outdoor projects and buy then. Consider +10% Sun-Mon bid modifier.',
+          '<strong>TW vs Google gap averages +55%.</strong> Google channel ROAS ~3&times;, TW blended ~5&times;. Moderate gap (much smaller than OmegaVia\'s 6,500%). Google attribution is reasonably reliable here &mdash; but still favor TW for budget calls.',
+          '<strong>tROAS by season:</strong> Oct-Dec peak &rarr; 4.0&times; (push volume), May &rarr; 5.0&times; (efficiency window), Jan-Feb trough &rarr; 5.0&times; (defensive). Don\'t throttle the Q4 peak with too-high tROAS.',
+          '<strong>Seasonality is migrating Q4-ward.</strong> 2022 peaked in Aug-Sep; 2025 peaked in Nov. As gift-giving demand grows, plan for a bigger Nov-Dec each year. The Aug-Oct hunting base remains, but Q4 gift layer is the growth.',
+        ],
+      },
+    },
+  },
+
+  // -------------------- LUMECUBE --------------------
+  'lumecube': {
+    name: 'LumeCube Lighting',
+    em: 'Lighting',
+    sub: 'LED Lighting for Content Creators &middot; 4yr TW + 5yr Google Ads &middot; Nov peak proven across 3 sources &middot; Oct-2022 pixel artifact removed &middot; 9.5/10',
+    badge: 'WRK MARKETING &middot; SEASONALITY INTELLIGENCE',
+    accent: '#06b6d4', accent2: '#67e8f9', accent3: '#0e7490',
+    ready: true,
+    meta: ['1,461 days TW (2022-2025)','4yr TW + 5yr Google Ads','Blended ROAS 3.4&times;','~36% net margin','82.4% new customers','MER ~22%'],
+    kpis: [
+      {label:'True Peak', val:'Nov', color:'#10b981', sub:'1.73 coef &middot; Dec 1.26 &middot; every year'},
+      {label:'True Trough', val:'Jul', color:'#ef4444', sub:'0.75 coef &middot; summer lull'},
+      {label:'Best Profit Month', val:'Jan', color:'var(--accent)', sub:'POAS 4.27&times; &middot; 41% margin'},
+      {label:'Account Status', val:'Declining', color:'#ef4444', sub:'-13% YoY &middot; margin 45%&rarr;31%'},
+    ],
+    data: {
+      // SEASONALITY: within-year normalized on TW BLENDED total_sales (2022-2025) — each month / that year's mean, averaged.
+      // Confirmed across 3 independent sources (TW blended 4yr, Google Ads channel 5yr, Google Trends 5 terms).
+      // Oct-2022 $1.9M Google-channel value was a PROVEN pixel artifact (TW total_sales that month = normal $677k); excluded.
+      COEFF:[1.112,0.984,1.018,0.823,0.820,0.774,0.745,0.873,0.932,0.931,1.726,1.262],
+      COEFF_MEDIAN:[1.119,0.973,1.017,0.859,0.875,0.805,0.791,0.910,0.959,0.901,1.559,1.310],
+      COEFF_GOOGLE_CHANNEL:[1.263,1.009,0.994,0.840,0.782,0.701,0.673,0.840,1.009,1.056,1.637,1.196],
+      // 2025 actual TW (most recent full year)
+      REV:[530849,482040,558679,495885,464591,436047,390798,449428,402112,482038,760035,678074],
+      SPEND:[148657,158759,154178,169335,133312,127953,127960,123652,122010,138027,205920,180876],
+      ROAS:[3.57,3.04,3.62,2.93,3.48,3.41,3.05,3.63,3.30,3.49,3.69,3.75],
+      CH_ROAS:[2.78,2.36,2.97,2.64,2.56,2.54,2.50,2.93,2.73,2.93,3.25,2.84],
+      POAS:[2.15,1.88,2.22,1.82,2.12,2.06,1.81,2.27,2.02,2.07,2.08,2.15],
+      MARGIN:[30.7,28.2,32.7,27.4,31.2,30.1,25.7,34.2,29.7,29.7,28.7,29.9],
+      ORDERS:[2256,2018,2264,1834,1873,1684,1706,1826,1865,1847,2742,2704],
+      NEW_ORDERS:[1953,1756,1866,1486,1456,1260,1312,1355,1394,1392,2112,1956],
+      AOV:[228,226,235,256,234,246,218,231,207,251,264,242],
+      CVR:[1.00,0.95,1.00,0.97,0.98,0.96,0.95,0.93,0.97,1.10,1.41,1.43],
+      NEW_IDX:[1.21,1.09,1.16,0.92,0.91,0.78,0.82,0.84,0.87,0.87,1.31,1.22],
+      NCPA:[76,90,83,114,92,102,98,91,88,99,97,92],
+      NEW_PCT:[86.6,87.0,82.4,81.0,77.7,74.8,76.9,74.2,74.7,75.4,77.0,72.3],
+      DISC_PCT:[4.6,4.7,5.9,4.0,4.0,10.6,13.1,9.3,6.7,12.4,11.5,16.0],
+      GAP:[29,29,22,11,36,34,22,24,21,19,14,32],
+      POAS_SEASONAL:[4.27,3.64,2.72,2.17,2.40,2.71,2.48,2.97,2.95,2.91,3.36,3.32],
+      MARGIN_SEASONAL:[41.1,39.2,35.8,29.8,31.6,30.6,30.7,34.2,33.9,35.1,36.6,37.8],
+      REV_2024:[686717,587363,566524,495680,508392,494156,478378,568039,576084,502596,784067,783472],
+      REV_2025:[530849,482040,558679,495885,464591,436047,390798,449428,402112,482038,760035,678074],
+      REV_2026:[null,null,null,null,null,null,null,null,null,null,null,null],
+      ROAS_2024:[4.96,4.69,4.02,3.64,2.96,2.81,3.12,3.61,3.98,3.44,3.71,4.66],
+      ROAS_2025:[3.57,3.04,3.62,2.93,3.48,3.41,3.05,3.63,3.30,3.49,3.69,3.75],
+      ROAS_2026:[null,null,null,null,null,null,null,null,null,null,null,null],
+      GT_CAT_1:[10.3,10.2,9.3,11.1,9.4,9.5,13.8,10.5,10.7,10.8,16.0,15.1],
+      GT_CAT_2:[11.1,10.4,10.4,9.4,9.2,10.2,10.6,9.5,8.9,9.2,11.5,12.6],
+      GT_CAT_1_LABEL:'"video light" (5-yr avg, ex-2026)',
+      GT_CAT_2_LABEL:'"ring light" (5-yr avg, ex-2026)',
+      DOW:[
+        {d:'MON',rev:21776,roas:4.64},
+        {d:'TUE',rev:20850,roas:4.64},
+        {d:'WED',rev:20856,roas:4.64},
+        {d:'THU',rev:21037,roas:4.79},
+        {d:'FRI',rev:21278,roas:4.86},
+        {d:'SAT',rev:16698,roas:4.01},
+        {d:'SUN',rev:17175,roas:3.94},
+      ],
+      BUDGET_ACTIONS:['Scale','Hold','Hold','Reduce','Reduce','Reduce','Reduce','Hold','Hold','Scale','Max Scale','Max Scale'],
+      EXEC_SUMMARY:'LumeCube makes <strong>LED lighting for content creators</strong> &mdash; video lights, ring lights (Ring Light Pro), webcam/desk lights (Edge Light 2.0), RGB tube lights, and panel/flex products. 4yr TW: <strong>$29.1M revenue</strong> (2022 $7.54M &rarr; 2023 $8.44M &rarr; 2024 $7.03M &rarr; 2025 $6.13M), ~36% net margin, blended ROAS ~3.4&times;. Seasonality is <strong>strongly Q4-dominant and rock-solid: November is the peak in EVERY one of the 4 years</strong> (1.73 coef), December the #2 month (1.26), with a January secondary bump (1.11, the new-year creator-gear wave) &mdash; all driven by holiday gifting of cameras/creator kits + content-creation New Year\'s resolutions. The deep trough is <strong>July (0.75)</strong>, the summer lull. This pattern is confirmed across THREE independent sources: TW blended sales (4yr), Google Ads channel (5yr), and Google Trends (brand + 4 category terms all peak Nov). <strong>82.4% of orders are new customers</strong> &mdash; an acquisition-heavy profile (like Iron Neck / Tie Boss) with limited repeat runway. <strong>The real story is structural decline</strong>: revenue is down ~19% off the 2022/2023 peak with net margin compressing 45%&rarr;31% on flat ~$1.8M ad spend &mdash; the seasonality is healthy but the business is shrinking underneath it. January is the most <em>profitable</em> month (POAS 4.27&times;, 41% margin, cheapest acquisition at $44 NCPA).',
+      FINDINGS:[
+        {cls:'fa',title:'November Peak &mdash; Confirmed 3 Ways, Every Year',text:'TW blended total_sales peaks in <strong>November all 4 years</strong> (2022 $1.54M, 2023 $1.15M, 2024 $784k, 2025 $760k). Coef 1.73 (Dec 1.26 #2, Jan 1.11 bump). The Google Ads channel (5yr) and Google Trends (brand "lume cube" Nov 1.29, "led video light" Nov 1.75, "video light" Nov 1.41) independently agree. <strong>This is the highest-confidence seasonality read in the portfolio</strong> &mdash; holiday gifting of creator gear + Q4 content push.'},
+        {cls:'fr',title:'The Oct-2022 $1.9M Pixel Artifact',text:'Google Ads reported a <strong>$1,913,534 conversion value in Oct 2022 at 22&times; ROAS</strong> &mdash; ~5&times; any other month. TW total_sales that month was a <strong>normal $676,676</strong>, proving it was a Google pixel over-count, not real revenue. Left uncorrected, it falsely flagged October as the peak. Removed from all seasonality math. Lesson: always cross-check channel-reported value against TW blended.'},
+        {cls:'fr',title:'Structural Decline Underneath Healthy Seasonality',text:'Revenue: 2023 $8.44M &rarr; <strong>2024 -16.7% &rarr; 2025 -12.8%</strong> (~19% off peak). Net margin compressing <strong>45% &rarr; 31%</strong> while ad spend stays flat at ~$1.8M &mdash; efficiency erosion. The seasonal SHAPE is reliable, but plan off a shrinking base. This is a brand-health conversation for Jomar, separate from the seasonality calendar.'},
+        {cls:'fa',title:'January Is The Profit Month',text:'<strong>POAS peaks in January (4.27&times;)</strong> with 41% net margin and the cheapest new-customer acquisition of the year ($44 NCPA vs $77 in summer). The Jan creator-gear bump (new-year content resolutions, gift-card redemption) converts efficiently. Don\'t pull budget after Christmas &mdash; January is the highest-return window outside Q4 volume.'},
+        {cls:'fv',title:'82.4% New Customers = Acquisition Treadmill',text:'Like Iron Neck and Tie Boss, LumeCube is <strong>acquisition-dependent</strong> (82.4% new buyers, stable ~74-87% all months). A LED light is a durable, infrequent purchase &mdash; limited repeat/LTV runway. Combined with the revenue decline, this means growth requires either new products (Nano/Micro entry SKUs, new colorways) or improved acquisition efficiency. Monitor new-customer volume + NCPA as the leading indicators.'},
+        {cls:'fg',title:'Brand Dominates; Ring Light + Desk Lamp Are The NB Battlegrounds',text:'Among top search terms, <strong>brand = 91% of value at 10.7&times; ROAS</strong> ("lume cube" exact 9.6&times;, "lumecube" phrase 21&times;). Non-brand category demand worth pursuing: <strong>"ring light" / "ring light with stand"</strong> (3-4&times;, Ring Light Pro), <strong>"desk lamp"</strong> (2.5&times;, Edge Light 2.0), <strong>"tube lights"</strong> (8.3&times;). These category terms peak Nov-Dec in Trends &mdash; align NB push with the Q4 demand wave.'},
+      ],
+      MONTH_META:[
+        {s:'&#10052;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.11 + BEST PROFIT MONTH (POAS 4.27&times;, 41% margin, NCPA $44).</strong> New-year creator-gear bump &mdash; resolutions + gift-card redemption. Don\'t pull budget post-Christmas; January is the most efficient window of the year.'},
+        {s:'&#10052;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.98.</strong> Post-bump normalization. Still strong POAS (3.64&times;) and 39% margin. Hold at baseline.'},
+        {s:'&#127793;',a:'Hold',ac:'aho',conf:'Medium',note:'<strong>Coef 1.02.</strong> At-average month. Margin slips to 36%, POAS 2.72&times;. Hold.'},
+        {s:'&#127800;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.82 &mdash; spring softening + WEAKEST profitability.</strong> POAS 2.17&times; (year-low), 30% margin, NCPA $114 (most expensive acquisition). Pull spend &mdash; this is the worst efficiency month.'},
+        {s:'&#9728;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.82.</strong> Summer lull begins. POAS 2.40&times;. Below-average demand &mdash; reduce vs baseline.'},
+        {s:'&#127958;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.77.</strong> Deep summer. ROAS holds (3.41&times;) but volume is low. Discounting creeps up (10.6%). Conserve budget for Q4.'},
+        {s:'&#127754;',a:'Reduce',ac:'are',conf:'High',note:'<strong>Coef 0.75 (annual TROUGH) + weakest margin (25.7%).</strong> Summer creator-gear lull, heavy discounting (13.1%). NCPA $98. Lowest-demand month &mdash; cut spend, bank it for November.'},
+        {s:'&#127811;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.87.</strong> Demand reawakening. Best summer margin (34.2%), POAS 2.97&times;. Hold &mdash; start preparing Q4 assets.'},
+        {s:'&#127809;',a:'Hold',ac:'aho',conf:'High',note:'<strong>Coef 0.93.</strong> Back-to-content season building. POAS 2.95&times;. Below average but trending up &mdash; hold and pre-build the Q4 ramp.'},
+        {s:'&#127875;',a:'Scale',ac:'asc',conf:'High',note:'<strong>Coef 0.93 but the Q4 ramp begins &mdash; AOV peaks ($251), strong POAS (2.91&times;).</strong> Early holiday + gifting demand awakening. Start scaling budget and load creative into the Nov peak.'},
+        {s:'&#127873;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>TRUE PEAK &mdash; coef 1.73, biggest month every year.</strong> 2025 Nov $760k; 2022 Nov $1.54M. BFCM + holiday gifting of cameras/creator kits. POAS 3.36&times;, AOV $264. Category terms (ring light, video light) peak in Trends now. Push budget to the wall.'},
+        {s:'&#127876;',a:'Max Scale',ac:'asc',conf:'High',note:'<strong>Coef 1.26 &mdash; #2 month.</strong> 2025 Dec $678k. Holiday gift season for creators. POAS 3.32&times;, 38% seasonal margin. Discounting peaks (16%, holiday promos). Sustain max scale through mid-Dec shipping cutoff.'},
+      ],
+      INSIGHTS:{
+        opp:[
+          '<strong>January is an under-appreciated profit window.</strong> POAS 4.27&times;, 41% margin, $44 NCPA &mdash; the most efficient month of the year. The standard instinct to slash budget after Christmas is wrong here; the new-year creator-gear bump converts cheaply. Hold or scale Jan, don\'t cut.',
+          '<strong>Q4 is the volume + AOV engine &mdash; plan inventory and budget aggressively.</strong> Nov-Dec carry peak revenue (coef 1.73/1.26) and peak AOV ($264/$242). Align the non-brand category push (ring light, desk lamp, tube lights &mdash; all Trends-peak Nov-Dec) with the Q4 wave to capture gifting demand beyond brand search.',
+          '<strong>New entry-price products are the decline antidote.</strong> 82.4% new-customer dependence + a shrinking base means growth needs fresh acquisition pools. Lower-price SKUs and new colorways/launches reset the new-customer funnel &mdash; the same playbook that works for the acquisition-treadmill brands.',
+          '<strong>Pull summer budget forward to Q4.</strong> Apr-Jul (coef 0.75-0.82) is both low-demand AND low-margin (25-30%, NCPA up to $114). Every dollar saved in the spring/summer trough is worth far more deployed in November.',
+        ],
+        risk:[
+          '<strong>Structural revenue decline is the headline risk.</strong> -16.7% (2024) then -12.8% (2025), margin 45%&rarr;31% on flat spend. Seasonality tells you WHEN to spend; it doesn\'t fix a shrinking base. This needs a brand-level strategy conversation (product, positioning, channel mix) with Jomar &mdash; not just calendar optimization.',
+          '<strong>Acquisition treadmill.</strong> 82.4% new customers, durable infrequent product = no LTV cushion. When new-customer flow slows (and it is &mdash; revenue is falling), there\'s no repeat base to backstop it. Monitor monthly new-customer volume + NCPA as the true leading indicator.',
+          '<strong>Don\'t trust Google-channel conversion value in isolation.</strong> The Oct-2022 $1.9M phantom proves the pixel can wildly over-report. Always validate against TW blended total_sales before making budget or seasonality calls. Google currently UNDER-reports by ~25-30% (2025), but it has over-reported catastrophically before.',
+          '<strong>Spring is a profitability trap.</strong> April is the worst month (POAS 2.17&times;, 30% margin, $114 NCPA) yet sits right after the profitable Jan-Mar window &mdash; easy to over-spend on momentum. Cut hard Apr-Jul.',
+        ],
+        tactic:[
+          '<strong>DOW: weekday brand, weekend-weak.</strong> Mon-Fri index ~1.05-1.09, Sat 0.84 / Sun 0.86. The professional/creator buyer purchases on workdays. Consider -10-15% weekend bid modifier and concentrate budget Mon-Fri.',
+          '<strong>TW vs Google gap ~25-30% (2025).</strong> Blended ROAS ~3.4&times; vs Google-reported ~2.7&times;. Moderate, reliable gap &mdash; favor TW blended for budget decisions but Google attribution is directionally usable for in-platform optimization.',
+          '<strong>tROAS by season:</strong> Nov-Dec peak &rarr; lower tROAS to capture volume; Jan &rarr; lean in (best efficiency); Apr-Jul trough &rarr; raise tROAS defensively (don\'t chase low-margin summer volume).',
+          '<strong>Non-brand should ride the Q4 calendar.</strong> Category terms (ring light, video light, desk lamp, tube lights) peak Nov-Dec in Trends. Scale NB prospecting into Q4 when category demand is highest and AOV peaks; throttle it in the summer trough.',
+        ],
+      },
+    },
+  },
+
+};
+const BRAND_ORDER = ['house-of-leon','simply-good-coffee','iron-neck','popflex','out-of-print','edge-lifestyle','omegavia','tie-boss','lumecube'];
+
+// =============================================================
+// STATE + CHART INSTANCE TRACKING
+// =============================================================
+let activeBrand = 'house-of-leon';
+const chartInstances = {};
+
+function destroyCharts(){
+  Object.keys(chartInstances).forEach(k => { try { chartInstances[k].destroy(); } catch(e){} delete chartInstances[k]; });
+}
+
+// =============================================================
+// HELPERS
+// =============================================================
+function cCol(c){if(c>=1.30)return'#059669';if(c>=1.15)return'#10b981';if(c>=1.05)return'#22c55e';if(c>=0.95)return'#6366f1';if(c>=0.85)return'#eab308';if(c>=0.75)return'#f97316';return'#dc2626';}
+function cBg(c){if(c>=1.30)return'c-peak';if(c>=1.15)return'c-strong';if(c>=1.05)return'c-above';if(c>=0.95)return'c-avg';if(c>=0.85)return'c-slight';if(c>=0.75)return'c-below';return'c-trough';}
+function dLabel(c){
+  if(c>=1.30)return ['PEAK','bp'];
+  if(c>=1.15)return ['STRONG','bs'];
+  if(c>=1.05)return ['ABOVE AVG','ba'];
+  if(c>=0.95)return ['AVERAGE','bv'];
+  if(c>=0.85)return ['WEAK','bb'];
+  if(c>=0.75)return ['BELOW','bw'];
+  return ['TROUGH','bt'];
+}
+function fmtK(n){if(n>=1000000)return'$'+(n/1000000).toFixed(2)+'M';return'$'+Math.round(n/1000)+'k';}
+function rgb(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return r+','+g+','+b;}
+
+// =============================================================
+// BRAND THEME (CSS variable swap)
+// =============================================================
+function applyTheme(brand){
+  const r = document.documentElement;
+  r.style.setProperty('--accent', brand.accent);
+  r.style.setProperty('--accent2', brand.accent2);
+  r.style.setProperty('--accent3', brand.accent3);
+  const rgbVal = rgb(brand.accent);
+  r.style.setProperty('--border', `rgba(${rgbVal},.10)`);
+  r.style.setProperty('--border2', `rgba(${rgbVal},.22)`);
+  document.body.style.backgroundImage = `radial-gradient(ellipse at top, rgba(${rgbVal},.04) 0%, transparent 55%)`;
+  document.title = brand.name + ' — Seasonality Intelligence';
+}
+
+// =============================================================
+// BRAND DROPDOWN
+// =============================================================
+function renderTabs(){
+  const btn = document.getElementById('brandDdBtn');
+  const label = document.getElementById('brandDdLabel');
+  const menu = document.getElementById('brandDdMenu');
+  const active = BRANDS[activeBrand];
+  label.textContent = active ? active.name : 'Select Brand';
+  menu.innerHTML = '';
+  BRAND_ORDER.forEach(slug => {
+    const b = BRANDS[slug];
+    const isActive = slug === activeBrand;
+    const isPending = !b.ready;
+    const cls = ['bs-dd-item', isActive?'active':'', isPending?'pending':''].filter(Boolean).join(' ');
+    menu.innerHTML += `<button class="${cls}" data-slug="${slug}" type="button"><span class="dot"></span>${b.name}${isPending?' &middot; pending':''}</button>`;
+  });
+  menu.querySelectorAll('button').forEach(item => {
+    item.addEventListener('click', () => {
+      setBrand(item.dataset.slug);
+      menu.classList.remove('open');
+      btn.classList.remove('open');
+    });
+  });
+  // toggle handler (bind once)
+  if(!btn.dataset.bound){
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menu.classList.toggle('open');
+      btn.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if(!document.getElementById('brandDropdown').contains(e.target)){
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape'){ menu.classList.remove('open'); btn.classList.remove('open'); }
+    });
+  }
+}
+
+function setBrand(slug){
+  activeBrand = slug;
+  destroyCharts();
+  applyTheme(BRANDS[slug]);
+  renderTabs();
+  renderDashboard();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// =============================================================
+// EMPTY STATE
+// =============================================================
+function renderEmptyState(brand){
+  const root = document.getElementById('dashboardRoot');
+  const checklist = brand.pending.map(p => `
+    <div class="ec-item ${p.done?'done':''}">
+      <span class="ec-status">${p.done?'READY':'PENDING'}</span>
+      <span>${p.label}</span>
+    </div>`).join('');
+  root.innerHTML = `
+    <div class="header">
+      <div>
+        <div class="brand-badge"><div class="brand-dot"></div><span>${brand.badge}</span></div>
+        <h1>${brand.name.split(' ').slice(0,-1).join(' ')} <em>${brand.em}</em></h1>
+        <div class="header-sub">${brand.sub}</div>
+      </div>
+    </div>
+    <div class="empty-state">
+      <div class="empty-icon">&#9881;</div>
+      <div class="empty-title">Data Pipeline Pending</div>
+      <div class="empty-text">This brand's seasonality dashboard is queued for build. Once the data sources below are in place, the same 10-section analysis used for the other brands will be generated automatically.</div>
+      <div class="empty-checklist">
+        ${checklist}
+      </div>
+    </div>
+  `;
+}
+
+// =============================================================
+// FULL DASHBOARD RENDER
+// =============================================================
+function renderDashboard(){
+  const brand = BRANDS[activeBrand];
+  if(!brand.ready){ renderEmptyState(brand); return; }
+  const d = brand.data;
+
+  const root = document.getElementById('dashboardRoot');
+  const kpiHtml = brand.kpis.map(k => `<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-val" style="color:${k.color}">${k.val}</div><div class="kpi-sub">${k.sub}</div></div>`).join('');
+  const metaHtml = brand.meta.map(m => `<span class="meta-pill">${m}</span>`).join('');
+
+  // Findings (split into 3 columns of 2)
+  const findingsHtml = `
+    <div class="grid3">
+      <div>${d.FINDINGS.slice(0,2).map(f => `<div class="finding-box ${f.cls}"><div class="finding-title">${f.title}</div><div class="finding-text">${f.text}</div></div>`).join('')}</div>
+      <div>${d.FINDINGS.slice(2,4).map(f => `<div class="finding-box ${f.cls}"><div class="finding-title">${f.title}</div><div class="finding-text">${f.text}</div></div>`).join('')}</div>
+      <div>${d.FINDINGS.slice(4,6).map(f => `<div class="finding-box ${f.cls}"><div class="finding-title">${f.title}</div><div class="finding-text">${f.text}</div></div>`).join('')}</div>
+    </div>`;
+
+  // Build sections
+  root.innerHTML = `
+    <div class="header">
+      <div>
+        <div class="brand-badge"><div class="brand-dot"></div><span>${brand.badge}</span></div>
+        <h1>${brand.name.split(' ').slice(0,-1).join(' ')} <em>${brand.em}</em></h1>
+        <div class="header-sub">${brand.sub}</div>
+        <div class="header-meta">${metaHtml}</div>
+      </div>
+      <div class="kpi-grid">${kpiHtml}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">01 &middot; Executive Summary</div>
+      <div class="anno">&#9733; <div><strong>Core finding:</strong> ${d.EXEC_SUMMARY}</div></div>
+      ${findingsHtml}
+    </div>
+
+    <div class="section">
+      <div class="section-title">02 &middot; Seasonality Heatmap &middot; 12-Month Revenue Demand</div>
+      <div class="heatmap" id="heatmap"></div>
+      <div class="card">
+        <div class="chart-label">Seasonality Coefficient &mdash; Full-Year Curve</div>
+        <div class="chart-desc">1.00 = average month &middot; &gt;1.00 = above-average revenue demand &middot; &lt;1.00 = below-average &middot; Computed from 36 months of Triple Whale revenue data</div>
+        <div class="chart-wrap"><canvas id="coeffChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">03 &middot; Monthly Seasonality &middot; Full Model Output</div>
+      <div class="card">
+        <table class="coeff-table">
+          <thead><tr>
+            <th>Month</th><th>Rev Coeff</th><th>Intensity</th><th>Demand Tier</th>
+            <th>Avg Revenue</th><th>Blended ROAS</th><th>POAS</th><th>Net Margin</th>
+            <th>New Cust Index</th><th>Budget Action</th>
+          </tr></thead>
+          <tbody id="coeffTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">04 &middot; Revenue &amp; Profit Performance</div>
+      <div class="grid2" style="margin-bottom:20px">
+        <div class="card"><div class="chart-label">Average Monthly Revenue (3-Year Avg)</div><div class="chart-desc">Bars colored by seasonality tier &middot; Triple Whale blended revenue</div><div class="chart-wrap"><canvas id="revChart"></canvas></div></div>
+        <div class="card"><div class="chart-label">Profit on Ad Spend (POAS) by Month</div><div class="chart-desc">POAS = net profit / ad spend</div><div class="chart-wrap"><canvas id="poasChart"></canvas></div></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><div class="chart-label">Blended ROAS vs Net Margin by Month</div><div class="chart-desc">Reveals where efficiency vs profitability diverge</div><div class="chart-wrap-tall"><canvas id="roasMarginChart"></canvas></div></div>
+        <div class="card"><div class="chart-label">Average Order Value &amp; Conversion Rate</div><div class="chart-desc">Premium AOV signals premium buyers</div><div class="chart-wrap-tall"><canvas id="aovCvrChart"></canvas></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">05 &middot; Year-over-Year Growth Trajectory</div>
+      <div class="grid2">
+        <div class="card"><div class="chart-label">Monthly Revenue by Year</div><div class="chart-desc">Demonstrates seasonality stability across growth</div><div class="chart-wrap-tall"><canvas id="yoyRevChart"></canvas></div></div>
+        <div class="card"><div class="chart-label">Blended ROAS by Year</div><div class="chart-desc">Mature account behavior 2024&ndash;2026</div><div class="chart-wrap-tall"><canvas id="yoyRoasChart"></canvas></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">06 &middot; Attribution Gap &middot; Triple Whale vs Channel-Reported ROAS</div>
+      <div class="grid2">
+        <div class="card"><div class="chart-label">Blended (TW) vs Channel-Reported ROAS</div><div class="chart-desc">Where bars diverge, attribution is unreliable</div><div class="chart-wrap-tall"><canvas id="attrGapChart"></canvas></div></div>
+        <div class="card"><div class="chart-label">Attribution Gap % by Month</div><div class="chart-desc">Positive = TW captures MORE than Google reports</div><div class="chart-wrap-tall"><canvas id="gapPctChart"></canvas></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">07 &middot; New Customer Acquisition &amp; Day-of-Week Patterns</div>
+      <div class="grid2" style="margin-bottom:20px">
+        <div class="card"><div class="chart-label">New Customer Orders by Month</div><div class="chart-desc">Bars colored by seasonality tier</div><div class="chart-wrap-tall"><canvas id="newCustChart"></canvas></div></div>
+        <div class="card"><div class="chart-label">New Customer CPA (NCPA) by Month</div><div class="chart-desc">Cost to acquire a new customer</div><div class="chart-wrap-tall"><canvas id="ncpaChart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="chart-label" style="margin-bottom:14px">Day-of-Week Performance (Google Ads)</div>
+        <div class="chart-desc" style="margin-bottom:16px">Mon&ndash;Tue are the strongest buying days. Weekend ROAS drops 30%+ vs weekdays.</div>
+        <div class="dow-grid" id="dowGrid"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">08 &middot; Google Trends &middot; Category Demand</div>
+      <div class="grid2">
+        <div class="card"><div class="chart-label">Category Search Interest &mdash; Monthly Average (5-Year)</div><div class="chart-desc">Index 0&ndash;100</div><div class="chart-wrap-tall"><canvas id="gtCategoryChart"></canvas></div></div>
+        <div class="card"><div class="chart-label">Demand Alignment: Trends vs Revenue Index</div><div class="chart-desc">Compares category search with brand revenue seasonality</div><div class="chart-wrap-tall"><canvas id="gtAlignChart"></canvas></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">09 &middot; Monthly Breakdown &middot; Strategic Insight Cards</div>
+      <div class="month-grid" id="monthGrid"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">10 &middot; Strategic Insights &amp; Action Plan</div>
+      <div class="insight-grid">
+        <div class="insight-card">
+          <div class="insight-icon" style="color:#10b981">&#9650;</div>
+          <div class="insight-title" style="color:#10b981">Top Growth Opportunities</div>
+          ${d.INSIGHTS.opp.map((t,i) => `<div class="insight-item"><div class="insight-num">${i+1}</div><div>${t}</div></div>`).join('')}
+        </div>
+        <div class="insight-card">
+          <div class="insight-icon" style="color:#ef4444">&#9660;</div>
+          <div class="insight-title" style="color:#ef4444">Risk Periods &amp; Cautions</div>
+          ${d.INSIGHTS.risk.map((t,i) => `<div class="insight-item"><div class="insight-num">${i+1}</div><div>${t}</div></div>`).join('')}
+        </div>
+        <div class="insight-card">
+          <div class="insight-icon" style="color:var(--accent)">&#9670;</div>
+          <div class="insight-title" style="color:var(--accent)">Hidden Patterns &amp; Tactics</div>
+          ${d.INSIGHTS.tactic.map((t,i) => `<div class="insight-item"><div class="insight-num">${i+1}</div><div>${t}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><strong>${brand.name}</strong> &middot; Seasonality Intelligence Report &middot; Updated May 18, 2026</p>
+      <p>Data Sources: Triple Whale (36 months) &middot; Google Ads via Supermetrics &middot; Google Trends via pytrends &middot; <strong>WRK Marketing</strong></p>
+    </div>
+  `;
+
+  buildHeatmap(d);
+  buildCoeffTable(d);
+  buildMonthCards(d);
+  buildDowGrid(d);
+  buildAllCharts(d);
+}
+
+// =============================================================
+// SECTION BUILDERS
+// =============================================================
+function buildHeatmap(d){
+  const wrap = document.getElementById('heatmap');
+  const maxC = Math.max(...d.COEFF), minC = Math.min(...d.COEFF);
+  const span = maxC - minC;
+  wrap.innerHTML = MONTHS.map((m,i) => {
+    const c = d.COEFF[i];
+    const pct = ((c-minC)/span*100).toFixed(0);
+    const pin = c===maxC?'<div class="star">&#9733;</div>':c===minC?'<div class="star">!</div>':'';
+    const [dl] = dLabel(c);
+    return `<div class="hm-cell ${cBg(c)}">${pin}<div class="hm-month">${m}</div><div class="hm-coeff">${c.toFixed(3)}</div><div class="hm-label">${dl}</div><div class="hm-bar"><div class="hm-fill" style="width:${pct}%"></div></div></div>`;
+  }).join('');
+}
+
+function buildCoeffTable(d){
+  const tbody = document.getElementById('coeffTableBody');
+  tbody.innerHTML = MONTHS_FULL.map((m,i) => {
+    const c = d.COEFF[i];
+    const col = cCol(c);
+    const [dl,db] = dLabel(c);
+    const pct = Math.min(100,Math.max(5,(c-0.5)/1.1*100));
+    return `<tr>
+      <td><div class="td-month"><div class="dot" style="background:${col}"></div>${m}</div></td>
+      <td><span class="td-coeff" style="color:${col}">${c.toFixed(3)}</span></td>
+      <td><div class="bar-wrap"><div class="bar-inner" style="width:${pct}%;background:${col}"></div></div></td>
+      <td><span class="badge ${db}">${dl}</span></td>
+      <td style="font-weight:700;font-size:13px">${fmtK(d.REV[i])}</td>
+      <td style="font-weight:700;font-size:13px;color:${col}">${d.ROAS[i].toFixed(2)}&times;</td>
+      <td style="font-weight:700;font-size:13px">${d.POAS[i].toFixed(2)}</td>
+      <td style="font-weight:700;font-size:13px">${d.MARGIN[i].toFixed(1)}%</td>
+      <td style="font-weight:700;font-size:13px;color:${d.NEW_IDX[i]>=1.15?'#10b981':d.NEW_IDX[i]<=0.85?'#f59e0b':'var(--text2)'}">${d.NEW_IDX[i].toFixed(2)}&times;</td>
+      <td style="font-size:12px;color:var(--text2);font-weight:600">${d.BUDGET_ACTIONS[i]}</td>
+    </tr>`;
+  }).join('');
+}
+
+function buildMonthCards(d){
+  const grid = document.getElementById('monthGrid');
+  grid.innerHTML = MONTHS_FULL.map((m,i) => {
+    const c = d.COEFF[i];
+    const col = cCol(c);
+    const [dl] = dLabel(c);
+    const meta = d.MONTH_META[i];
+    return `<div class="month-card">
+      <div class="mc-header" style="background:linear-gradient(135deg,rgba(${rgb(col)},.1),rgba(${rgb(col)},.03))">
+        <div class="mc-name">${meta.s} ${m}</div>
+        <span class="mc-coeff" style="background:rgba(${rgb(col)},.14);color:${col};border:1px solid rgba(${rgb(col)},.28)">${c.toFixed(3)}</span>
+      </div>
+      <div class="mc-body">
+        <div class="mc-row"><span class="mc-key">Demand</span><span class="mc-val" style="color:${col}">${dl}</span></div>
+        <div class="mc-row"><span class="mc-key">Avg Revenue</span><span class="mc-val">${fmtK(d.REV[i])}</span></div>
+        <div class="mc-row"><span class="mc-key">Blended ROAS</span><span class="mc-val">${d.ROAS[i].toFixed(2)}&times;</span></div>
+        <div class="mc-row"><span class="mc-key">POAS</span><span class="mc-val">${d.POAS[i].toFixed(2)}</span></div>
+        <div class="mc-row"><span class="mc-key">Net Margin</span><span class="mc-val">${d.MARGIN[i].toFixed(1)}%</span></div>
+        <div class="mc-row"><span class="mc-key">New Customers</span><span class="mc-val">${d.NEW_ORDERS[i]}</span></div>
+        <div class="mc-row"><span class="mc-key">AOV</span><span class="mc-val">$${d.AOV[i].toLocaleString()}</span></div>
+        <div class="mc-div"></div>
+        <div class="mc-note">${meta.note}</div>
+        <div class="mc-action ${meta.ac}">${meta.a}</div>
+        <div class="mc-conf">${meta.conf} confidence</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildDowGrid(d){
+  const grid = document.getElementById('dowGrid');
+  const maxRev = Math.max(...d.DOW.map(x => x.rev));
+  // Color DOW relative to this brand's own ROAS range (top tertile = green, middle = mid, bottom = amber)
+  const roasVals = d.DOW.map(x => x.roas);
+  const rMax = Math.max(...roasVals), rMin = Math.min(...roasVals);
+  const rT1 = rMin + (rMax-rMin) * 2/3;
+  const rT2 = rMin + (rMax-rMin) * 1/3;
+  grid.innerHTML = d.DOW.map(x => {
+    const col = x.roas >= rT1 ? '#10b981' : x.roas >= rT2 ? '#22c55e' : '#f59e0b';
+    const pct = (x.rev/maxRev*100).toFixed(0);
+    return `<div class="dow-cell" style="border-color:${col}30">
+      <div class="dow-day" style="color:${col}">${x.d}</div>
+      <div class="dow-rev">$${(x.rev/1000).toFixed(1)}k</div>
+      <div class="dow-roas" style="color:${col}">${x.roas.toFixed(2)}&times;</div>
+      <div class="hm-bar" style="margin-top:8px"><div class="hm-fill" style="width:${pct}%;background:${col}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// =============================================================
+// CHARTS
+// =============================================================
+function buildAllCharts(d){
+  Chart.defaults.color='#a8a094';
+  Chart.defaults.font.family="'Inter',sans-serif";
+  Chart.defaults.plugins.legend.labels.boxWidth=10;
+  Chart.defaults.plugins.legend.labels.padding=14;
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const accentRgb = rgb(accent);
+  const GL = {color:`rgba(${accentRgb},.06)`,drawBorder:false};
+  const TK = {color:'#6b6358',font:{size:11}};
+
+  // 1. Coefficient (dynamic y-axis based on brand's actual coefficient range)
+  const _cMax = Math.max(...d.COEFF), _cMin = Math.min(...d.COEFF);
+  const _yMax = Math.ceil(_cMax * 11) / 10;  // 10% headroom, round up to 0.1
+  const _yMin = Math.max(0, Math.floor(_cMin * 9) / 10);
+  chartInstances.coeff = new Chart(document.getElementById('coeffChart'), {type:'line',data:{labels:MONTHS,datasets:[
+    {label:'Revenue Coefficient',data:d.COEFF,borderColor:accent,backgroundColor:`rgba(${accentRgb},.08)`,pointBackgroundColor:d.COEFF.map(c=>cCol(c)),pointBorderColor:d.COEFF.map(c=>cCol(c)),pointRadius:8,pointHoverRadius:11,borderWidth:2.5,fill:true,tension:0.4},
+    {label:'Mean (1.00)',data:Array(12).fill(1),borderColor:'rgba(255,255,255,.15)',borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:{...TK,callback:v=>v.toFixed(2)+'x'},min:_yMin,max:_yMax}}}});
+
+  // 2. Revenue
+  chartInstances.rev = new Chart(document.getElementById('revChart'),{type:'bar',data:{labels:MONTHS,datasets:[{label:'Avg Revenue',data:d.REV,backgroundColor:d.REV.map((_,i)=>cCol(d.COEFF[i])+'aa'),borderColor:d.REV.map((_,i)=>cCol(d.COEFF[i])),borderWidth:1.5,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.y.toLocaleString()}}},scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:{...TK,callback:v=>'$'+Math.round(v/1000)+'k'},min:0}}}});
+
+  // 3. POAS
+  chartInstances.poas = new Chart(document.getElementById('poasChart'),{type:'bar',data:{labels:MONTHS,datasets:[{label:'POAS',data:d.POAS,backgroundColor:d.POAS.map(v=>v>=4?'rgba(16,185,129,.7)':v>=3?'rgba(34,197,94,.6)':v>=2?'rgba(245,158,11,.6)':'rgba(239,68,68,.55)'),borderColor:d.POAS.map(v=>v>=4?'#10b981':v>=3?'#22c55e':v>=2?'#f59e0b':'#ef4444'),borderWidth:1.5,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:{...TK,callback:v=>v.toFixed(1)},min:0}}}});
+
+  // 4. ROAS + Margin
+  chartInstances.roasMargin = new Chart(document.getElementById('roasMarginChart'),{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'Blended ROAS',data:d.ROAS,backgroundColor:`rgba(${accentRgb},.45)`,borderColor:accent,borderWidth:1.5,borderRadius:4,yAxisID:'y'},
+    {label:'Net Margin %',data:d.MARGIN,type:'line',borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.08)',pointBackgroundColor:'#10b981',borderWidth:2.5,pointRadius:5,fill:false,tension:0.4,yAxisID:'y2'}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:{...TK,callback:v=>v+'x'},position:'left'},y2:{grid:{display:false},ticks:{...TK,callback:v=>v+'%'},position:'right'}}}});
+
+  // 5. AOV + CVR
+  chartInstances.aovCvr = new Chart(document.getElementById('aovCvrChart'),{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'AOV',data:d.AOV,backgroundColor:`rgba(${accentRgb},.5)`,borderColor:accent,borderWidth:1.5,borderRadius:4,yAxisID:'y'},
+    {label:'Conv Rate %',data:d.CVR,type:'line',borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.08)',pointBackgroundColor:'#8b5cf6',borderWidth:2.5,pointRadius:5,fill:false,tension:0.4,yAxisID:'y2'}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:{...TK,callback:v=>'$'+v.toLocaleString()},position:'left'},y2:{grid:{display:false},ticks:{...TK,callback:v=>v.toFixed(2)+'%'},position:'right'}}}});
+
+  // 6. YoY Revenue
+  chartInstances.yoyRev = new Chart(document.getElementById('yoyRevChart'),{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'2024',data:d.REV_2024,borderColor:'rgba(99,102,241,.9)',pointRadius:4,borderWidth:2.5,tension:0.4},
+    {label:'2025',data:d.REV_2025,borderColor:'rgba(16,185,129,.9)',pointRadius:4,borderWidth:2.5,tension:0.4},
+    {label:'2026 (partial)',data:d.REV_2026,borderColor:accent,backgroundColor:`rgba(${accentRgb},.06)`,pointRadius:6,borderWidth:3,tension:0.4,borderDash:[6,3]}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:{...TK,callback:v=>'$'+Math.round(v/1000)+'k'},min:0}}}});
+
+  // 7. YoY ROAS
+  chartInstances.yoyRoas = new Chart(document.getElementById('yoyRoasChart'),{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'2024',data:d.ROAS_2024,borderColor:'rgba(99,102,241,.9)',pointRadius:4,borderWidth:2.5,tension:0.4},
+    {label:'2025',data:d.ROAS_2025,borderColor:'rgba(16,185,129,.9)',pointRadius:4,borderWidth:2.5,tension:0.4},
+    {label:'2026 (partial)',data:d.ROAS_2026,borderColor:accent,backgroundColor:`rgba(${accentRgb},.06)`,pointRadius:6,borderWidth:3,tension:0.4,borderDash:[6,3]}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:{...TK,callback:v=>v+'x'},min:0}}}});
+
+  // 8. Attribution Gap
+  chartInstances.attrGap = new Chart(document.getElementById('attrGapChart'),{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'TW Blended ROAS',data:d.ROAS,backgroundColor:`rgba(${accentRgb},.55)`,borderColor:accent,borderWidth:1.5,borderRadius:4},
+    {label:'Google Channel ROAS',data:d.CH_ROAS,backgroundColor:'rgba(59,130,246,.45)',borderColor:'#3b82f6',borderWidth:1.5,borderRadius:4}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:{...TK,callback:v=>v+'x'},min:0}}}});
+
+  // 9. Gap %
+  chartInstances.gapPct = new Chart(document.getElementById('gapPctChart'),{type:'bar',data:{labels:MONTHS,datasets:[{label:'Attribution Gap %',data:d.GAP,backgroundColor:d.GAP.map(v=>v>30?'rgba(16,185,129,.6)':v>0?'rgba(34,197,94,.45)':'rgba(239,68,68,.55)'),borderColor:d.GAP.map(v=>v>30?'#10b981':v>0?'#22c55e':'#ef4444'),borderWidth:1.5,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:{...TK,callback:v=>v+'%'}}}}});
+
+  // 10. New Customer
+  chartInstances.newCust = new Chart(document.getElementById('newCustChart'),{type:'bar',data:{labels:MONTHS,datasets:[{label:'New Customer Orders',data:d.NEW_ORDERS,backgroundColor:d.NEW_ORDERS.map((_,i)=>cCol(d.COEFF[i])+'99'),borderColor:d.NEW_ORDERS.map((_,i)=>cCol(d.COEFF[i])),borderWidth:1.5,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:TK,min:0}}}});
+
+  // 11. NCPA
+  chartInstances.ncpa = new Chart(document.getElementById('ncpaChart'),{type:'bar',data:{labels:MONTHS,datasets:[{label:'NCPA',data:d.NCPA,backgroundColor:d.NCPA.map(v=>v<=600?'rgba(16,185,129,.55)':v<=750?'rgba(245,158,11,.5)':'rgba(239,68,68,.55)'),borderColor:d.NCPA.map(v=>v<=600?'#10b981':v<=750?'#f59e0b':'#ef4444'),borderWidth:1.5,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:{...TK,callback:v=>'$'+v},min:0}}}});
+
+  // 12. GT Category
+  chartInstances.gtCat = new Chart(document.getElementById('gtCategoryChart'),{type:'line',data:{labels:MONTHS,datasets:[
+    {label:d.GT_CAT_1_LABEL,data:d.GT_CAT_1,borderColor:accent,backgroundColor:`rgba(${accentRgb},.08)`,pointRadius:4,borderWidth:2.5,tension:0.4,fill:true},
+    {label:d.GT_CAT_2_LABEL,data:d.GT_CAT_2,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.06)',pointRadius:4,borderWidth:2.5,tension:0.4,fill:true}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:TK,min:0}}}});
+
+  // 13. GT Alignment (dynamic y-axis based on combined coefficient & trends range)
+  const gtNorm = d.GT_CAT_1.map(v=>v/(d.GT_CAT_1.reduce((a,b)=>a+b,0)/12));
+  const _gtMax = Math.max(...d.COEFF, ...gtNorm);
+  const _gtMin = Math.min(...d.COEFF, ...gtNorm);
+  const _gtYMax = Math.ceil(_gtMax * 11) / 10;
+  const _gtYMin = Math.max(0, Math.floor(_gtMin * 9) / 10);
+  chartInstances.gtAlign = new Chart(document.getElementById('gtAlignChart'),{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'Brand Revenue Index',data:d.COEFF,borderColor:accent,backgroundColor:`rgba(${accentRgb},.1)`,pointRadius:5,borderWidth:3,tension:0.4},
+    {label:d.GT_CAT_1_LABEL+' Search Index',data:gtNorm,borderColor:'#8b5cf6',pointRadius:4,borderWidth:2.5,tension:0.4,borderDash:[5,3]}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:GL,ticks:TK},y:{grid:GL,ticks:{...TK,callback:v=>v.toFixed(2)+'x'},min:_gtYMin,max:_gtYMax}}}});
+}
+
+// =============================================================
+// INIT
+// =============================================================
+renderTabs();
+applyTheme(BRANDS[activeBrand]);
+renderDashboard();
+</script>
+</body>
+</html>
